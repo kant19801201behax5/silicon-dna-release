@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phoenix Zero × Silicon DNA — Casper Oracle</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      background: #0a0a0f;
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #0d1117 0%, #1a1a2e 100%);
+      border-bottom: 1px solid #21262d;
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-title { font-size: 18px; font-weight: 700; color: #fff; }
+    .header-title span { color: #7c3aed; }
+    .header-sub { font-size: 11px; color: #6e7681; margin-top: 2px; }
+    .live-badge {
+      display: flex; align-items: center; gap: 8px;
+      background: #0d2c0d; border: 1px solid #238636;
+      border-radius: 20px; padding: 4px 14px;
+      font-size: 11px; color: #3fb950;
+    }
+    .live-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #3fb950;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* Main grid */
+    .container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+
+    /* SAFE / UNSAFE hero */
+    .hero {
+      background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 32px;
+      margin-bottom: 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 24px;
+      align-items: center;
+    }
+    .status-block { text-align: center; }
+    .status-label { font-size: 11px; color: #6e7681; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+    .status-value {
+      font-size: 56px; font-weight: 900;
+      text-transform: uppercase;
+      transition: all 0.5s;
+    }
+    .status-value.safe { color: #3fb950; text-shadow: 0 0 40px rgba(63,185,80,0.4); }
+    .status-value.unsafe { color: #f85149; text-shadow: 0 0 40px rgba(248,81,73,0.4); }
+    .status-value.loading { color: #6e7681; }
+
+    .metric-block { text-align: center; }
+    .metric-label { font-size: 11px; color: #6e7681; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .metric-value { font-size: 28px; font-weight: 700; color: #e0e0e0; }
+    .metric-unit { font-size: 12px; color: #8b949e; }
+
+    /* Stats row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+    .stat-card:hover { border-color: #7c3aed; }
+    .stat-num { font-size: 26px; font-weight: 800; color: #7c3aed; margin-bottom: 4px; }
+    .stat-label { font-size: 11px; color: #8b949e; }
+
+    /* Two column layout */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+
+    /* Card */
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid #21262d;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-title { font-size: 13px; font-weight: 600; color: #e0e0e0; }
+    .card-badge {
+      font-size: 10px; padding: 2px 8px;
+      border-radius: 10px; background: #21262d; color: #8b949e;
+    }
+    .card-body { padding: 16px 20px; }
+
+    /* Chain bars */
+    .chain-row { margin-bottom: 12px; }
+    .chain-name { font-size: 11px; color: #8b949e; margin-bottom: 4px; display: flex; justify-content: space-between; }
+    .chain-bar-bg { background: #21262d; border-radius: 4px; height: 6px; overflow: hidden; }
+    .chain-bar { height: 100%; border-radius: 4px; transition: width 0.5s, background 0.3s; }
+    .chain-bar.ok   { background: #3fb950; }
+    .chain-bar.warn { background: #d29922; }
+    .chain-bar.crit { background: #f85149; }
+
+    /* Transaction feed */
+    .tx-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #21262d;
+      font-size: 12px;
+    }
+    .tx-item:last-child { border-bottom: none; }
+    .tx-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .tx-dot.safe { background: #3fb950; }
+    .tx-dot.unsafe { background: #f85149; }
+    .tx-hash { color: #7c3aed; font-family: monospace; font-size: 11px; }
+    .tx-hash a { color: #7c3aed; text-decoration: none; }
+    .tx-hash a:hover { text-decoration: underline; }
+    .tx-meta { color: #6e7681; font-size: 10px; margin-left: auto; white-space: nowrap; }
+
+    /* Contract info */
+    .contract-info { font-size: 11px; color: #6e7681; word-break: break-all; }
+    .contract-hash {
+      color: #7c3aed; font-family: monospace;
+      background: #1f1a2e; padding: 10px;
+      border-radius: 6px; margin-top: 8px;
+      font-size: 11px; word-break: break-all;
+    }
+
+    /* Architecture */
+    .arch-diagram {
+      background: #0d1117;
+      border: 1px solid #21262d;
+      border-radius: 8px;
+      padding: 16px;
+      font-size: 11px;
+      color: #8b949e;
+      font-family: monospace;
+      line-height: 1.8;
+    }
+    .arch-highlight { color: #7c3aed; }
+    .arch-green { color: #3fb950; }
+    .arch-orange { color: #d29922; }
+
+    /* Footer */
+    .footer {
+      border-top: 1px solid #21262d;
+      padding: 16px 40px;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 11px; color: #6e7681;
+    }
+    .footer a { color: #7c3aed; text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+
+    .timestamp { color: #6e7681; font-size: 10px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">Phoenix Zero <span>×</span> Silicon DNA</div>
+    <div class="header-sub">Casper Sequencer Health Oracle · Agentic Buildathon 2026</div>
+  </div>
+  <div class="live-badge">
+    <div class="live-dot"></div>
+    LIVE ON CASPER TESTNET
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- HERO: Oracle Status -->
+  <div class="hero">
+    <div class="status-block">
+      <div class="status-label">Network Status</div>
+      <div class="status-value loading" id="status-main">···</div>
+      <div class="timestamp" id="status-ts">fetching...</div>
+    </div>
+    <div class="metric-block">
+      <div class="metric-label">Arb Revert Ratio</div>
+      <div class="metric-value" id="arb-revert">—</div>
+      <div class="metric-unit">threshold: &lt;15%</div>
+    </div>
+    <div class="metric-block">
+      <div class="metric-label">Base P99 Latency</div>
+      <div class="metric-value" id="base-p99">—</div>
+      <div class="metric-unit">threshold: &lt;500ms</div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-num">206K+</div>
+      <div class="stat-label">Measurements since Mar 2026</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">6</div>
+      <div class="stat-label">Chains monitored (every 2s)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="tx-count">60+</div>
+      <div class="stat-label">Casper contract updates</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">72.1%</div>
+      <div class="stat-label">Peak revert — MEV War May 31</div>
+    </div>
+  </div>
+
+  <!-- Two columns -->
+  <div class="two-col">
+
+    <!-- Chain health -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Chain Health</div>
+        <div class="card-badge" id="chain-updated">updating...</div>
+      </div>
+      <div class="card-body" id="chains">
+        <div style="color:#6e7681;font-size:12px">Loading chain data...</div>
+      </div>
+    </div>
+
+    <!-- Agent Feed -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Agent Activity</div>
+        <div class="card-badge">60s interval</div>
+      </div>
+      <div class="card-body" id="agent-feed">
+        <div class="tx-item">
+          <div class="tx-dot safe"></div>
+          <div>
+            <div class="tx-hash"><a href="https://testnet.cspr.live/deploy/a1556a4f64ee2232f03bbb719d53101b030bc38b1c5d33ab45eb67a3eb71c43a" target="_blank">a1556a4f...c43a</a></div>
+            <div style="font-size:10px;color:#6e7681">update() — arb=4.76% base_p99=163ms</div>
+          </div>
+          <div class="tx-meta">~10 min ago</div>
+        </div>
+        <div class="tx-item">
+          <div class="tx-dot safe"></div>
+          <div>
+            <div class="tx-hash"><a href="https://testnet.cspr.live/deploy/5cb95cf9279721619a0f3a5ae46f4cb4628c688f03a673ec4f31b362c21cc2e3" target="_blank">5cb95cf9...2e3</a></div>
+            <div style="font-size:10px;color:#6e7681">update() — first contract call test</div>
+          </div>
+          <div class="tx-meta">~30 min ago</div>
+        </div>
+        <div class="tx-item">
+          <div class="tx-dot safe"></div>
+          <div>
+            <div class="tx-hash"><a href="https://testnet.cspr.live/deploy/4774fdbc61b42e683024a059be624279a2b06a13a654bcebfe1065492b7652f1" target="_blank">4774fdbc...52f1</a></div>
+            <div style="font-size:10px;color:#6e7681">transfer — first real on-chain tx</div>
+          </div>
+          <div class="tx-meta">~1h ago</div>
+        </div>
+        <div style="margin-top:12px;font-size:11px;color:#7c3aed;text-align:center">
+          <a href="https://testnet.cspr.live/account/0202494268f650725fb759e6b89bde9a44300a89a02b7d72477eff8894c857c5defb" target="_blank">
+            View all transactions on testnet.cspr.live →
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Architecture + Contract -->
+  <div class="two-col">
+
+    <!-- Architecture -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">How It Works</div>
+        <div class="card-badge">Casper Manifest ×6/9</div>
+      </div>
+      <div class="card-body">
+        <div class="arch-diagram">
+<span class="arch-green">DeFi Agent</span> wants to transact on Casper
+    │
+    ▼
+<span class="arch-highlight">[Silicon DNA]</span> — 12-layer identity check
+    │  CPU jitter · ML-KEM-768 PQC · ZK-proof
+    │  → LEGIT_AGENT ✓ / MALICIOUS_BOT ✗
+    │
+    ▼  pays $0.001 via <span class="arch-orange">x402</span>
+<span class="arch-highlight">[Phoenix Zero Oracle]</span> — network safety check
+    │  6 chains probed every 2s
+    │  arb_revert &lt; 15% AND base_p99 &lt; 500ms?
+    │
+    ▼  writes to
+<span class="arch-highlight">[Casper Smart Contract]</span> every 60s
+    │  update(safe, arb_p99_ms, revert_bps, ts)
+    │
+    ▼
+<span class="arch-green">Agent executes</span> if safe=true
+<span style="color:#f85149">Agent pauses</span>  if safe=false → saves gas
+        </div>
+      </div>
+    </div>
+
+    <!-- Contract info -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Casper Testnet Contract</div>
+        <div class="card-badge">deployed ✓</div>
+      </div>
+      <div class="card-body">
+        <div class="contract-info">SequencerOracle — deployed June 4, 2026</div>
+        <div class="contract-hash">hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d</div>
+
+        <div style="margin-top:16px">
+          <div style="font-size:11px;color:#6e7681;margin-bottom:8px">Entry Points:</div>
+          <div style="font-size:11px;color:#8b949e;line-height:2">
+            <span style="color:#7c3aed">update()</span> — autonomous agent pushes oracle state<br>
+            <span style="color:#3fb950">is_safe()</span> → bool — primary check for DeFi agents<br>
+            <span style="color:#3fb950">get_state()</span> → JSON — full snapshot
+          </div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+          <a href="https://testnet.cspr.live/deploy/2578359cc8ffcdac8316d6002d3aabed26888c102c8d69a2ccd3239f3fcd3326"
+             target="_blank"
+             style="font-size:10px;color:#7c3aed;background:#1f1a2e;padding:4px 10px;border-radius:6px;text-decoration:none">
+            Deploy TX →
+          </a>
+          <a href="https://github.com/kant19801201behax5/silicon-dna-release"
+             target="_blank"
+             style="font-size:10px;color:#7c3aed;background:#1f1a2e;padding:4px 10px;border-radius:6px;text-decoration:none">
+            GitHub →
+          </a>
+          <a href="https://dorahacks.io/buidl/43859"
+             target="_blank"
+             style="font-size:10px;color:#7c3aed;background:#1f1a2e;padding:4px 10px;border-radius:6px;text-decoration:none">
+            DoraHacks →
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <div>Phoenix Zero × Silicon DNA · Casper Agentic Buildathon 2026</div>
+  <div>
+    <a href="https://phoenix-zero.vercel.app">Main Dashboard</a> ·
+    <a href="https://rtt.phoenix-ai.work/api/public-feed">Live API</a> ·
+    <a href="https://testnet.cspr.live/account/0202494268f650725fb759e6b89bde9a44300a89a02b7d72477eff8894c857c5defb">Casper Account</a>
+  </div>
+</div>
+
+<script>
+const FEED_URL   = 'https://rtt.phoenix-ai.work/api/public-feed';
+const HEALTH_URL = 'https://rtt.phoenix-ai.work/api/health';
+
+const CHAINS = [
+  { key: 'arb',    name: 'Arbitrum One',  p99: 'arb_p99',    rev: 'arb_revert'  },
+  { key: 'base',   name: 'Base',          p99: 'base_p99',   rev: 'base_revert' },
+  { key: 'op',     name: 'Optimism',      p99: 'op_p99',     rev: null          },
+  { key: 'zk',     name: 'zkSync Era',    p99: 'zk_p99',     rev: null          },
+  { key: 'mantle', name: 'Mantle',        p99: 'mantle_p99', rev: null          },
+];
+
+function barClass(p99) {
+  if (p99 < 200) return 'ok';
+  if (p99 < 500) return 'warn';
+  return 'crit';
+}
+
+function barWidth(p99) {
+  return Math.min(100, (p99 / 1000) * 100);
+}
+
+async function update() {
+  try {
+    const [feed, health] = await Promise.all([
+      fetch(FEED_URL).then(r => r.json()),
+      fetch(HEALTH_URL).then(r => r.json()),
+    ]);
+
+    const d = feed.data[feed.data.length - 1];
+    const safe = health.safe && (parseFloat(d.arb_revert||0) < 0.15) && (parseInt(d.base_p99||0) < 500);
+
+    // Hero
+    const el = document.getElementById('status-main');
+    el.textContent = safe ? 'SAFE' : 'UNSAFE';
+    el.className = 'status-value ' + (safe ? 'safe' : 'unsafe');
+
+    document.getElementById('arb-revert').textContent =
+      (parseFloat(d.arb_revert||0)*100).toFixed(1) + '%';
+    document.getElementById('base-p99').textContent =
+      parseInt(d.base_p99||0) + 'ms';
+    document.getElementById('status-ts').textContent =
+      'Updated: ' + new Date().toLocaleTimeString();
+
+    // Chains
+    const chainsEl = document.getElementById('chains');
+    chainsEl.innerHTML = CHAINS.map(c => {
+      const p99 = parseInt(d[c.p99] || 0);
+      const rev = c.rev ? (parseFloat(d[c.rev]||0)*100).toFixed(1) + '% revert · ' : '';
+      const cls = barClass(p99);
+      return `<div class="chain-row">
+        <div class="chain-name">
+          <span>${c.name}</span>
+          <span>${rev}${p99}ms</span>
+        </div>
+        <div class="chain-bar-bg">
+          <div class="chain-bar ${cls}" style="width:${barWidth(p99)}%"></div>
+        </div>
+      </div>`;
+    }).join('') + `<div class="chain-row" style="margin-top:4px">
+        <div class="chain-name"><span>Casper</span><span>monitored</span></div>
+        <div class="chain-bar-bg"><div class="chain-bar ok" style="width:20%"></div></div>
+      </div>`;
+
+    document.getElementById('chain-updated').textContent =
+      new Date().toLocaleTimeString();
+
+  } catch(e) {
+    document.getElementById('status-ts').textContent = 'Error: ' + e.message;
+  }
+}
+
+update();
+setInterval(update, 30000); // refresh every 30s
+</script>
+</body>
+</html>

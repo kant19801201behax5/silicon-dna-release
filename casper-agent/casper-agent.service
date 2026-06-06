@@ -1,0 +1,18 @@
+[Unit]
+Description=Phoenix Zero — Casper Autonomous DeFi Agent
+After=network.target silicon-dna.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=phoenix
+WorkingDirectory=/opt/casper-agent
+EnvironmentFile=/opt/casper-agent/.env
+ExecStart=/usr/bin/node /opt/casper-agent/agent.js
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
