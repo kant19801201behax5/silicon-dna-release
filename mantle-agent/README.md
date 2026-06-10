@@ -35,12 +35,15 @@ Any Mantle DeFi protocol:
 
 ## Contract Address
 
-Deployed on **Mantle Sepolia Testnet** (chain ID: 5003):
+Deployed on **Mantle Sepolia Testnet** (chain ID: 5003) ✅
+
+Deployed: June 10, 2026 | Block: 39780635
+Tx: 0x01bfc35f2bb9e7e460a1df79b66a597a5cd99396f5459a47c965ee397a467b2f
 ```
-CONTRACT_ADDRESS=<see .env after deployment>
+CONTRACT_ADDRESS=0xd394ffae51d8fb52187cf3ae3b014ddc80dc7b15
 ```
 
-Explorer: https://explorer.sepolia.mantle.xyz
+Explorer: https://sepolia.mantlescan.xyz/address/0xd394ffae51d8fb52187cf3ae3b014ddc80dc7b15
 
 ---
 
