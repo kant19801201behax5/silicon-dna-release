@@ -1,4 +1,4 @@
-# Mantle AI Awakening Hackathon — Submission Checklist
+# Mantle Turing Test Hackathon 2026 Hackathon — Submission Checklist
 
 ## General Requirements (Part A — Mantle, 50 pts)
 
