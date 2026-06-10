@@ -7,8 +7,8 @@ Write-Host "Building Casper Oracle Contract (WASM)" -ForegroundColor Cyan
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
 
 $ContractDir = "$PSScriptRoot\oracle-contract"
-$DoServer    = "root@198.211.103.36"
-$SshKey      = "C:\Users\Kent\.ssh\phoenix_do_key"
+$DoServer    = "user@YOUR_SERVER"          # replace with your server
+$SshKey      = "C:\path\to\your\key.pem"  # replace with your SSH key path
 
 # Step 1: Check Rust
 Write-Host "`n▶ Step 1: Checking Rust..." -ForegroundColor Yellow

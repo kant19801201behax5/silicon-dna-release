@@ -25,11 +25,11 @@ Phoenix Zero (DO NYC1)
 │
 ↓ https://rtt.phoenix-ai.work/api/public-feed  (public, no auth)
 │
-│  {
-│    "causal":     { "r2": 0.998, "vars": { "arb_revert_ratio": 0.04 } },
-│    "network":    { "base_p99_ms": 45, "tension": 0.085 },
-│    "silicon_dna":{ "trust": 0.95 }
-│  }
+│  [
+│    { "chain": "arbitrum", "p99_ms": 45, "revert_ratio": 0.04, "stall": false, "tension": 0.085 },
+│    { "chain": "mantle",   "p99_ms": 62, "revert_ratio": 0.02, "stall": false, "tension": 0.041 },
+│    ...
+│  ]
 │
 ↓ casper_oracle_pusher.py  (autonomous agent, runs every 60s)
 │
@@ -82,7 +82,8 @@ Autonomous Python agent. Reads live signal, computes safety state, pushes to con
 cd pusher
 pip install -r requirements.txt
 cp .env.example .env
-# fill in SIGNAL_TOKEN, CONTRACT_HASH, CASPER_KEY_PATH
+# fill in CONTRACT_HASH, CASPER_KEY_PATH
+# SIGNAL_URL already set to public feed (no token needed)
 python casper_oracle_pusher.py
 ```
 
@@ -152,7 +153,7 @@ cargo odra deploy --network testnet
 cd pusher
 pip install -r requirements.txt
 cp .env.example .env
-# Edit .env: add SIGNAL_TOKEN, CONTRACT_HASH, key path
+# Edit .env: add CONTRACT_HASH, CASPER_KEY_PATH (no token — public feed)
 python casper_oracle_pusher.py
 ```
 

@@ -45,7 +45,7 @@ if [ ! -f "$WASM_PATH" ]; then
     echo "    # WASM at: target/wasm32-unknown-unknown/release/sequencer_oracle.wasm"
     echo ""
     echo "  Then upload:"
-    echo "    scp target/wasm32-unknown-unknown/release/sequencer_oracle.wasm root@198.211.103.36:/opt/casper-oracle/"
+    echo "    scp target/wasm32-unknown-unknown/release/sequencer_oracle.wasm user@YOUR_SERVER:/opt/casper-oracle/"
     exit 1
 fi
 echo "  ✅ WASM found: $WASM_PATH ($(du -h $WASM_PATH | cut -f1))"
