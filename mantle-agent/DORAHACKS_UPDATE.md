@@ -1,5 +1,5 @@
 # Silicon DNA × Mantle — DoraHacks BUIDL Update
-# Mantle AI Awakening Hackathon 2026
+# Mantle Turing Test Hackathon 2026
 # Track: AI Trading & Strategy — Mirana Alpha & Data
 
 ---
