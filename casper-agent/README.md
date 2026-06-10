@@ -23,7 +23,7 @@ Phoenix Zero (DO NYC1)
 │  Probes 6 chains every 2s via eth_blockNumber / info_get_status
 │  Measures: RTT P99, revert ratio, stall detection
 │
-↓ /api/signal  (authenticated)
+↓ https://rtt.phoenix-ai.work/api/public-feed  (public, no auth)
 │
 │  {
 │    "causal":     { "r2": 0.998, "vars": { "arb_revert_ratio": 0.04 } },
