@@ -179,6 +179,7 @@ node mantle_pusher.js
 
 ## Live Proof
 
+- **TuringOracle on Mantle Sepolia:** [0xd394ffae51d8fb52187cf3ae3b014ddc80dc7b15](https://sepolia.mantlescan.xyz/address/0xd394ffae51d8fb52187cf3ae3b014ddc80dc7b15)
 - Dashboard: https://phoenix-zero.vercel.app
 - Public feed: https://rtt.phoenix-ai.work/api/public-feed
 - Demo video: https://youtu.be/o-CQfiSfQ4o
