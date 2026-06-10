@@ -1,6 +1,6 @@
 # Silicon DNA — AI-Powered Sequencer Intelligence for Mantle
 
-> **Mantle AI Awakening Hackathon 2026** · Track: AI Trading & Strategy (Alpha & Data)
+> **Mantle Turing Test Hackathon 2026** · Track: AI Trading & Strategy (Alpha & Data)
 > 
 > **Also submitted:** Casper Agentic Buildathon 2026 (`casper-agent/`)
 
