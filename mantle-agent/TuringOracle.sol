@@ -7,6 +7,8 @@ pragma solidity ^0.8.20;
  *         Any DeFi protocol can call is_legitimate() to verify agent/human traffic.
  *
  * Deployed on: Mantle Sepolia Testnet
+ * Address:     0xd394ffae51d8fb52187cf3ae3b014ddc80dc7b15
+ * Explorer:    https://sepolia.mantlescan.xyz/address/0xd394ffae51d8fb52187cf3ae3b014ddc80dc7b15
  * Pusher:      mantle_pusher.js (runs on DO NYC1, updates every 60s)
  *
  * Silicon DNA classifies traffic into:
