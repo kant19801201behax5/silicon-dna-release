@@ -1,0 +1,16 @@
+{
+  "name": "mantle-turing-pusher",
+  "version": "1.0.0",
+  "description": "Pushes Silicon DNA Turing verdicts to TuringOracle on Mantle Sepolia",
+  "main": "mantle_pusher.js",
+  "scripts": {
+    "start": "node mantle_pusher.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "ethers": "^6.13.5"
+  }
+}
