@@ -55,7 +55,8 @@ Result: only legitimate agents get oracle data. Malicious bots are dropped at L0
 
 **Oracle on Casper Testnet:**
 - Contract: `hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d`
-- Agent calls `update()` every 60 seconds — 60+ transactions since deployment
+- Agent calls `update()` every 60 seconds — **962 transactions** since June 3, 2026
+- Safety gate blocked **3,254 unsafe executions** (arb_revert > 15%) — autonomous decision-making in action
 - Wallet: `0202494268f650725fb759e6b89bde9a44300a89a02b7d72477eff8894c857c5defb`
 
 **Network monitoring (live since March 2026):**
