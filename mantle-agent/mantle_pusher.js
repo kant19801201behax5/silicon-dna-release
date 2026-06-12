@@ -40,21 +40,27 @@ async function fetchSiliconDNA() {
   if (!resp.ok) throw new Error(`Signal fetch failed: ${resp.status}`);
   const data = await resp.json();
 
-  // public-feed returns an array of chain metrics
-  const mantle = Array.isArray(data)
-    ? data.find(c => c.chain === 'mantle' || c.chain === 'Mantle')
-    : null;
+  // public-feed returns an array of chain objects: [{chain, p99_ms, stall, arb_revert_ratio, ...}, ...]
+  const chains = Array.isArray(data) ? data : (data.chains ?? []);
+  const mantle = chains.find(c => (c.chain ?? '').toLowerCase().includes('mantle'));
+  const arb    = chains.find(c => (c.chain ?? '').toLowerCase().includes('arb'));
+
+  // Derive trust from overall network tension (avg RTT health across chains)
+  const avgTension = chains.length > 0
+    ? chains.reduce((s, c) => s + (c.tension ?? 0.1), 0) / chains.length
+    : 0.1;
+  const arb_revert = arb ? (arb.arb_revert_ratio ?? arb.revert_ratio ?? 0.05) : 0.05;
+
+  const trust_bps     = clamp(Math.round((1 - avgTension) * 10_000), 0, 10_000);
+  const bot_ratio_bps = clamp(Math.round(arb_revert * 10_000), 0, 10_000);
 
   return {
-    // Trust score: from silicon_dna field if present, else derive from tension
-    trust_bps:      Math.round((1 - (data.tension ?? 0.1)) * 10_000),
-    // Bot ratio: from arb_revert_ratio as proxy for adversarial traffic
-    bot_ratio_bps:  Math.round((data.arb_revert_ratio ?? 0.05) * 10_000),
-    // Human traffic: trust > 60% AND bot ratio < 40%
-    human_traffic:  (data.tension ?? 0.5) < 0.4,
-    // Mantle sequencer health
-    mantle_safe:    mantle ? (mantle.p99_ms < 500 && !mantle.stall) : true,
-    p99_ms:         mantle ? Math.round(mantle.p99_ms) : 0,
+    trust_bps,
+    bot_ratio_bps,
+    // Bug-fix: compute AFTER trust/bot are derived, not from raw data fields
+    human_traffic: trust_bps > 6_000 && bot_ratio_bps < 4_000,
+    mantle_safe:   mantle ? (mantle.p99_ms < 500 && !mantle.stall) : true,
+    p99_ms:        mantle ? Math.round(mantle.p99_ms ?? 0) : 0,
   };
 }
 
@@ -87,7 +93,7 @@ async function push() {
         bot_ratio_bps,
         state.mantle_safe,
         state.p99_ms,
-        { gasLimit: 200_000 }
+        { gasLimit: 100_000 }  // reduced: actual usage ~50k-80k, saves testnet MNT
       );
 
       console.log(`[PUSHER] Tx sent: ${tx.hash}`);

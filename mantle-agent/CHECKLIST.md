@@ -24,20 +24,25 @@
 
 ## Total Estimate: ~78-87/100 (Good → Excellent range)
 
-## Priority TODO (before June 15-17)
+## Priority TODO (before June 15)
 
-1. [ ] **CRITICAL:** Deploy TuringOracle.sol to Mantle Sepolia
-   - Open Remix IDE → paste TuringOracle.sol → compile 0.8.20
-   - Deploy on Mantle Sepolia (chain 5003, RPC: https://rpc.sepolia.mantle.xyz)
-   - Get testnet MNT: https://faucet.mantle.xyz
-   
-2. [ ] **CRITICAL:** Run mantle_pusher.js for 24+ hours (shows continuous transactions)
-   - Generates on-chain proof: "Core functionality runs end-to-end on Mantle"
-   
-3. [ ] **IMPORTANT:** Copy DORAHACKS_UPDATE.md content into DoraHacks BUIDL
-   - Make sure track is set to: AI Trading & Strategy (Mirana Alpha & Data)
-   
-4. [ ] Add deployed contract address to mantle-agent/CHECKLIST.md and README.md
+1. [x] **DONE:** Deploy TuringOracle.sol to Mantle Sepolia
+   - Address: `0xd394ffae51d8fb52187cf3ae3b014ddc80dc7b15`
+   - Tx: `0x01bfc35f2bb9e7e460a1df79b66a597a5cd99396f5459a47c965ee397a467b2f`
+   - Block: 39780635 | Deployed: June 10, 2026
+   - Explorer: https://sepolia.mantlescan.xyz/address/0xd394ffae51d8fb52187cf3ae3b014ddc80dc7b15
+
+2. [ ] **CRITICAL (YOU):** Refuel pusher wallet on Mantle Sepolia testnet
+   - Balance: ~0.00683 MNT (insufficient for gas ~0.008 MNT/tx at current prices)
+   - Faucet: https://faucet.testnet.mantle.xyz → send to wallet used for deployment
+   - After refuel: pusher auto-resumes (already running, PID 502073)
+   - Bug fixes deployed 2026-06-12: human_traffic now correct + gasLimit 200k→100k
+
+3. [ ] **CRITICAL (YOU):** Copy DORAHACKS_UPDATE.md content into DoraHacks BUIDL
+   - Track: **AI Trading & Strategy — Mirana Alpha & Data** (NOT generic AI)
+   - Add contract address + Explorer link to submission
+
+4. [x] Contract address in README.md ✅
 
 ## Privacy Check
 
