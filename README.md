@@ -135,7 +135,7 @@ This is the data signal that institutional MEV searchers know about but don't pu
 | Dashboard | React + Vite | `dist/` |
 | Mantle contract | Solidity 0.8.20 | `mantle-agent/TuringOracle.sol` |
 | Mantle pusher | Node.js + ethers v6 | `mantle-agent/mantle_pusher.js` |
-| Casper integration | Rust/Odra + Python | `casper-agent/` |
+| Casper contract    | Rust, casper-contract 5.1.1 (native, no Odra) | `casper-agent/` |
 
 **Dependencies:** `@google/genai`, `mlkem` (ML-KEM-768), `hash-wasm`, `express`, `ws`, `lru-cache`
 
@@ -182,8 +182,10 @@ node mantle_pusher.js
 - **TuringOracle on Mantle Sepolia:** [0xd394ffae51d8fb52187cf3ae3b014ddc80dc7b15](https://sepolia.mantlescan.xyz/address/0xd394ffae51d8fb52187cf3ae3b014ddc80dc7b15)
 - Dashboard: https://phoenix-zero.vercel.app
 - Public feed: https://rtt.phoenix-ai.work/api/public-feed
-- Demo video: https://youtu.be/o-CQfiSfQ4o
-- DoraHacks: https://dorahacks.io/hackathon/mantle-turing-test/buidl
+- Demo video (Mantle): https://youtu.be/o-CQfiSfQ4o
+- Demo video (Casper): https://youtu.be/KtTrz23B92w
+- DoraHacks (Mantle): https://dorahacks.io/hackathon/mantle-turing-test/buidl
+- DoraHacks (Casper): https://dorahacks.io/hackathon/casper-agentic-buildathon/buidl
 
 ---
 
