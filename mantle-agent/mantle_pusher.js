@@ -87,13 +87,25 @@ async function push() {
 
       console.log(`[PUSHER] Pushing: human=${state.human_traffic} trust=${trust_bps}bps bot=${bot_ratio_bps}bps mantle_safe=${state.mantle_safe} p99=${state.p99_ms}ms`);
 
+      // Query current baseFee to set tight gas params (avoid 2×baseFee default from ethers)
+      const feeData  = await provider.getFeeData();
+      const baseFee  = feeData.lastBaseFeePerGas ?? feeData.gasPrice ?? ethers.parseUnits('60', 'gwei');
+      // maxFeePerGas = baseFee + 10 Gwei tip buffer. Must fit: gasLimit × maxFeePerGas <= balance
+      const maxFee   = baseFee + ethers.parseUnits('10', 'gwei');
+      const prioFee  = ethers.parseUnits('1', 'gwei');
+      console.log(`[PUSHER] BaseFee=${Number(baseFee)/1e9|0}Gwei maxFee=${Number(maxFee)/1e9|0}Gwei`);
+
       const tx = await oracle.update(
         state.human_traffic,
         trust_bps,
         bot_ratio_bps,
         state.mantle_safe,
         state.p99_ms,
-        { gasLimit: 100_000 }  // reduced: actual usage ~50k-80k, saves testnet MNT
+        {
+          gasLimit:            80_000,          // estimate: ~70k first call, ~50k subsequent
+          maxFeePerGas:        maxFee,           // baseFee + 10 Gwei (not 2×baseFee default)
+          maxPriorityFeePerGas: prioFee,         // 1 Gwei tip
+        }
       );
 
       console.log(`[PUSHER] Tx sent: ${tx.hash}`);

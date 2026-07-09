@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test-ts-agent:
+    name: TypeScript Agent Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: casper-agent/ts-agent/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: casper-agent/ts-agent
+
+      - name: Run tests (15/15)
+        run: npm test
+        working-directory: casper-agent/ts-agent
+
+  check-secrets:
+    name: No secrets committed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check no .env files committed
+        run: |
+          if find . -name ".env" -not -name ".env.example" | grep -q .; then
+            echo "ERROR: .env file found!"
+            exit 1
+          fi
+          echo "OK: no .env files"
+
+      - name: Check no PEM keys committed
+        run: |
+          if find . -name "*.pem" | grep -q .; then
+            echo "ERROR: .pem key file found!"
+            exit 1
+          fi
+          echo "OK: no PEM keys"
