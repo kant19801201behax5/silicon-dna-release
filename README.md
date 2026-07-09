@@ -179,13 +179,30 @@ node mantle_pusher.js
 
 ## Live Proof
 
-- **TuringOracle on Mantle Sepolia:** [0xd394ffae51d8fb52187cf3ae3b014ddc80dc7b15](https://sepolia.mantlescan.xyz/address/0xd394ffae51d8fb52187cf3ae3b014ddc80dc7b15)
+### Casper Testnet (Casper Agentic Buildathon 2026)
+
+| Item | Value |
+|------|-------|
+| Contract hash | [`hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d`](https://testnet.cspr.live/contract/hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d) |
+| Deploy TX | [`2578359cc8ffcdac8316d6002d3aabed26888c102c8d69a2ccd3239f3fcd3326`](https://testnet.cspr.live/deploy/2578359cc8ffcdac8316d6002d3aabed26888c102c8d69a2ccd3239f3fcd3326) |
+| First agent update() | [`4774fdbc61b42e683024a059be624279a2b06a13a654bcebfe1065492b7652f1`](https://testnet.cspr.live/deploy/4774fdbc61b42e683024a059be624279a2b06a13a654bcebfe1065492b7652f1) |
+| Deployer wallet | [`0202494268f6507...`](https://testnet.cspr.live/account/0202494268f650725fb759e6b89bde9a44300a89a02b7d72477eff8894c857c5defb) |
+| On-chain updates | 962+ transactions (agent runs every 60s since June 3, 2026) |
+| Casper dashboard | https://rtt.phoenix-ai.work/casper |
+| Testing guide | [casper-agent/TESTING_GUIDE.md](casper-agent/TESTING_GUIDE.md) |
+
+### Mantle Sepolia (Mantle Turing Test Hackathon 2026)
+
+- **TuringOracle:** [0xd394ffae51d8fb52187cf3ae3b014ddc80dc7b15](https://sepolia.mantlescan.xyz/address/0xd394ffae51d8fb52187cf3ae3b014ddc80dc7b15)
+
+### All Links
+
 - Dashboard: https://phoenix-zero.vercel.app
 - Public feed: https://rtt.phoenix-ai.work/api/public-feed
-- Demo video (Mantle): https://youtu.be/o-CQfiSfQ4o
 - Demo video (Casper): https://youtu.be/KtTrz23B92w
-- DoraHacks (Mantle): https://dorahacks.io/hackathon/mantle-turing-test/buidl
+- Demo video (Mantle): https://youtu.be/o-CQfiSfQ4o
 - DoraHacks (Casper): https://dorahacks.io/hackathon/casper-agentic-buildathon/buidl
+- DoraHacks (Mantle): https://dorahacks.io/hackathon/mantle-turing-test/buidl
 
 ---
 
