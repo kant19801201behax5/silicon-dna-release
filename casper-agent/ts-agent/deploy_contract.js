@@ -1,82 +1,51 @@
-/**
- * Deploy SequencerOracle contract to Casper Testnet
- * Uses casper-js-sdk (already installed)
- * Run: node deploy_contract.js
- */
 'use strict';
 require('dotenv').config();
 const fs = require('fs');
-const {
-  CasperClient,
-  DeployUtil,
-  Keys,
-  CLPublicKey,
-  RuntimeArgs,
-} = require('casper-js-sdk');
+const fetch = require('node-fetch');
+const { DeployUtil, Keys, RuntimeArgs } = require('casper-js-sdk');
 
-const NODE_URL   = process.env.CASPER_NODE_URL  || 'https://rpc.testnet.casperlabs.io';
+const NODE_URL   = 'https://node.testnet.cspr.cloud/rpc';
 const CHAIN_NAME = process.env.CASPER_CHAIN_NAME || 'casper-test';
 const KEY_PATH   = process.env.CASPER_SECRET_KEY_PATH || './keys/secret_key.pem';
-const WASM_PATH  = process.env.WASM_PATH || '/opt/casper-oracle/oracle-contract/target/wasm32-unknown-unknown/release/sequencer_oracle.wasm';
+const WASM_PATH  = '/opt/casper-oracle/oracle-contract/target/wasm32-unknown-unknown/release/sequencer_oracle.wasm';
+const API_KEY    = process.env.CSPR_CLOUD_KEY;
 
 async function deploy() {
-  console.log('━'.repeat(50));
-  console.log('Phoenix Zero — Casper Contract Deployer');
-  console.log(`Node:  ${NODE_URL}`);
-  console.log(`Chain: ${CHAIN_NAME}`);
-  console.log(`WASM:  ${WASM_PATH}`);
-  console.log('━'.repeat(50));
-
-  // Load key
-  if (!fs.existsSync(KEY_PATH)) {
-    console.error(`❌ Key not found: ${KEY_PATH}`);
-    process.exit(1);
-  }
-  const keyContent = fs.readFileSync(KEY_PATH, 'utf8');
-  const keyPair = Keys.Ed25519.parsePrivateKey(
-    Keys.Ed25519.readBase64WithPEM(keyContent)
-  );
-  console.log(`Key: ${keyPair.publicKey.toHex().slice(0, 24)}...`);
-
-  // Load WASM
-  if (!fs.existsSync(WASM_PATH)) {
-    console.error(`❌ WASM not found: ${WASM_PATH}`);
-    process.exit(1);
-  }
+  console.log('Deploying SequencerOracle to Casper Testnet...');
+  
+  const keyPair   = Keys.Secp256K1.loadKeyPairFromPrivateFile(KEY_PATH);
   const wasmBytes = new Uint8Array(fs.readFileSync(WASM_PATH));
-  console.log(`WASM: ${wasmBytes.length} bytes`);
+  console.log('WASM:', wasmBytes.length, 'bytes');
+  console.log('From:', keyPair.publicKey.toFormattedString().slice(0,24) + '...');
 
-  // Build deploy
-  const deployParams = new DeployUtil.DeployParams(
-    keyPair.publicKey,
-    CHAIN_NAME,
-    1,       // gas price
-    1800000  // TTL 30 min
-  );
+  const params  = new DeployUtil.DeployParams(keyPair.publicKey, CHAIN_NAME, 1, 1800000);
+  const session = DeployUtil.ExecutableDeployItem.newModuleBytes(wasmBytes, RuntimeArgs.fromMap({}));
+  const payment = DeployUtil.standardPayment(200000000000); // 200 CSPR
+  const deploy  = DeployUtil.makeDeploy(params, session, payment);
+  const signed  = DeployUtil.signDeploy(deploy, keyPair);
 
-  // Module bytes session = WASM deployment
-  const session = DeployUtil.ExecutableDeployItem.newModuleBytes(
-    wasmBytes,
-    RuntimeArgs.fromMap({})  // no constructor args — call() takes none
-  );
+  const deployJson = DeployUtil.deployToJson(signed);
+  const body = JSON.stringify({
+    jsonrpc: '2.0', id: 1,
+    method: 'account_put_deploy',
+    params: { deploy: deployJson.deploy }
+  });
 
-  const payment = DeployUtil.standardPayment(200000000000n); // 200 CSPR for deploy
+  const resp = await fetch(NODE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': API_KEY },
+    body, timeout: 30000
+  });
 
-  const deploy = DeployUtil.makeDeploy(deployParams, session, payment);
-  const signedDeploy = DeployUtil.signDeploy(deploy, keyPair);
-
-  console.log('\n▶ Sending deploy to Casper Testnet...');
-  const client = new CasperClient(NODE_URL);
-  const deployHash = await client.putDeploy(signedDeploy);
-
-  console.log(`\n✅ Deploy sent!`);
-  console.log(`   Hash:    ${deployHash}`);
-  console.log(`   Track:   https://testnet.cspr.live/deploy/${deployHash}`);
-  console.log('\n⏳ Wait 2-3 minutes for finalization, then run:');
-  console.log(`   node get_contract_hash.js ${deployHash}`);
+  const data = await resp.json();
+  if (data.error) throw new Error(JSON.stringify(data.error));
+  
+  const hash = data.result.deploy_hash;
+  console.log('\n✅ CONTRACT DEPLOY SENT!');
+  console.log('Hash:', hash);
+  console.log('Track: https://testnet.cspr.live/deploy/' + hash);
+  console.log('\nWait 3-5 min then check your account named keys at:');
+  console.log('https://testnet.cspr.live/account/0202494268f650725fb759e6b89bde9a44300a89a02b7d72477eff8894c857c5defb');
 }
 
-deploy().catch(err => {
-  console.error('❌ Deploy failed:', err.message);
-  process.exit(1);
-});
+deploy().catch(e => { console.error('FAILED:', e.message); process.exit(1); });
