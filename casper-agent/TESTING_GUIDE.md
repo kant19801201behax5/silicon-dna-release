@@ -8,11 +8,11 @@ Step-by-step instructions for judges to verify the live system.
 
 **Contract hash:**
 ```
-hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d
+hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a
 ```
 
 **View on Casper Testnet explorer:**
-https://testnet.cspr.live/contract/hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d
+https://testnet.cspr.live/contract/hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a
 
 You will see:
 - Entry points: `update`, `is_safe`, `get_state`, `staleness_seconds`
@@ -95,7 +95,7 @@ cp .env.example .env
 
 Edit `.env`:
 ```
-CASPER_CONTRACT_HASH=hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d
+CASPER_CONTRACT_HASH=hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a
 CASPER_NODE=65.108.57.149
 CASPER_PORT=7777
 CASPER_KEY_PATH=./keys/your_secret_key.pem

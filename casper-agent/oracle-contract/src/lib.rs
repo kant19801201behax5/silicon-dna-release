@@ -101,7 +101,7 @@ pub extern "C" fn call() {
 
     let mut eps = EntryPoints::new();
     let public  = EntryPointAccess::Public;
-    let caller  = EntryPointType::Caller;
+    let called  = EntryPointType::Called;
     let payment = EntryPointPayment::Caller;
 
     eps.add_entry_point(EntityEntryPoint::new("update", alloc::vec![
@@ -111,15 +111,15 @@ pub extern "C" fn call() {
         Parameter::new("arb_revert_bps",  CLType::U64),
         Parameter::new("base_revert_bps", CLType::U64),
         Parameter::new("timestamp",       CLType::U64),
-    ], CLType::Unit, public.clone(), caller, payment));
+    ], CLType::Unit, public.clone(), called, payment));
 
     eps.add_entry_point(EntityEntryPoint::new(
         "is_safe",   alloc::vec![], CLType::Bool,
-        public.clone(), EntryPointType::Caller, EntryPointPayment::Caller
+        public.clone(), EntryPointType::Called, EntryPointPayment::Caller
     ));
     eps.add_entry_point(EntityEntryPoint::new(
         "get_state", alloc::vec![], CLType::String,
-        public, EntryPointType::Caller, EntryPointPayment::Caller
+        public, EntryPointType::Called, EntryPointPayment::Caller
     ));
 
     let (contract_hash, _) = storage::new_contract(

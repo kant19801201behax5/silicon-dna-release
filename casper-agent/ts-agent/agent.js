@@ -9,7 +9,7 @@
  *   4. When safe=false: pause execution, save gas, log reason
  *
  * Rust contract source: /opt/casper-oracle/oracle-contract/src/lib.rs
- * Contract hash: hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d
+ * Contract hash: hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a
  * x402 endpoint: https://rtt.phoenix-ai.work/api/v1/safe
  */
 
@@ -115,7 +115,7 @@ async function runAgent() {
   log('INFO', `Chain:    ${CHAIN_NAME}`);
   log('INFO', `Interval: ${INTERVAL_MS / 1000}s  |  Dry run: ${DRY_RUN}`);
   log('INFO', `x402:     ${X402_URL}`);
-  log('INFO', `Contract: hash-5e45d42c...d8354d (Rust/casper-contract 5.1.1)`);
+  log('INFO', `Contract: hash-2a7ebbc9...261f3a (Rust/casper-contract 5.1.1)`);
   log('INFO', '='.repeat(56));
 
   let keyPair = null;

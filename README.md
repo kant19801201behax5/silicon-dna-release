@@ -181,15 +181,26 @@ node mantle_pusher.js
 
 ### Casper Testnet (Casper Agentic Buildathon 2026)
 
+**Active contract (live, receiving `update()` calls every 5 min):**
+
+| Item | Value |
+|------|-------|
+| Contract hash | [`hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a`](https://testnet.cspr.live/contract/hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a) |
+| Deployed | July 16, 2026 (redeployed after a Casper network protocol upgrade changed entry-point context semantics — see note below) |
+| Deployer wallet | [`0202494268f6507...`](https://testnet.cspr.live/account/0202494268f650725fb759e6b89bde9a44300a89a02b7d72477eff8894c857c5defb) |
+| Casper dashboard | https://rtt.phoenix-ai.work/casper |
+| Testing guide | [casper-agent/TESTING_GUIDE.md](casper-agent/TESTING_GUIDE.md) |
+
+**Original deployment (historical proof, 962 real on-chain `update()` calls over 33 days):**
+
 | Item | Value |
 |------|-------|
 | Contract hash | [`hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d`](https://testnet.cspr.live/contract/hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d) |
 | Deploy TX | [`2578359cc8ffcdac8316d6002d3aabed26888c102c8d69a2ccd3239f3fcd3326`](https://testnet.cspr.live/deploy/2578359cc8ffcdac8316d6002d3aabed26888c102c8d69a2ccd3239f3fcd3326) |
 | First agent update() | [`4774fdbc61b42e683024a059be624279a2b06a13a654bcebfe1065492b7652f1`](https://testnet.cspr.live/deploy/4774fdbc61b42e683024a059be624279a2b06a13a654bcebfe1065492b7652f1) |
-| Deployer wallet | [`0202494268f6507...`](https://testnet.cspr.live/account/0202494268f650725fb759e6b89bde9a44300a89a02b7d72477eff8894c857c5defb) |
-| On-chain updates | 962+ transactions (agent runs every 60s since June 3, 2026) |
-| Casper dashboard | https://rtt.phoenix-ai.work/casper |
-| Testing guide | [casper-agent/TESTING_GUIDE.md](casper-agent/TESTING_GUIDE.md) |
+| On-chain updates | 962 transactions, June 3 – July 6, 2026 |
+
+Note: this contract used `EntryPointType::Caller` for its entry points, which under Casper 2.x resolves named keys in the *initiating account's* context rather than the contract's own storage. It worked under the network's earlier protocol behavior; after the network upgraded, calls to it began reverting. The active contract above fixes this with `EntryPointType::Called` and adds a caller-authorization check on `update()`.
 
 ### Mantle Sepolia (Mantle Turing Test Hackathon 2026)
 

@@ -4,8 +4,8 @@
 
 | Requirement | Status | Notes |
 |-------------|--------|-------|
-| Working prototype on Casper Testnet | ✅ DONE | Contract: hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d |
-| Blockchain transactions generated | ✅ DONE | 962 confirmed update() calls since June 3, 2026 |
+| Working prototype on Casper Testnet | ✅ DONE | Active contract: hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a |
+| Blockchain transactions generated | ✅ DONE | 962 confirmed update() calls (June 3 – July 6) on original contract, live updates resumed July 16 on redeployed contract |
 | Open source GitHub repo | ✅ DONE | https://github.com/kant19801201behax5/silicon-dna-release |
 | README with documentation | ✅ DONE | README.md complete with architecture + setup |
 | Demo video | ✅ DONE | https://youtu.be/o-CQfiSfQ4o |
@@ -27,9 +27,10 @@
 
 | Item | Value |
 |------|-------|
-| Contract hash | hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d |
-| Deployed | June 3, 2026 |
-| Total on-chain updates | 962 |
+| Active contract hash | hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a |
+| Active contract deployed | July 16, 2026 |
+| Original contract hash | hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d (June 3 – July 6, 2026) |
+| Total on-chain updates | 962 (original) + ongoing (active) |
 | Safety gate blocks | 3,254 (autonomous decisions) |
 | Wallet | 0202494268f650725fb759e6b89bde9a44300a89a02b7d72477eff8894c857c5defb |
 | Explorer | https://testnet.cspr.live |
