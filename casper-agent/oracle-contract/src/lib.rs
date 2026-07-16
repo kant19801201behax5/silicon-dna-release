@@ -15,6 +15,7 @@ use casper_contract::{
 };
 use casper_types::{
     CLType, CLValue, ApiError, Key, Parameter,
+    account::AccountHash,
     addressable_entity::{
         EntryPoints, EntityEntryPoint, EntryPointAccess, EntryPointType, EntryPointPayment,
     },
@@ -29,6 +30,7 @@ const KEY_ARB_REVERT_BPS:  &str = "arb_revert_bps";
 const KEY_BASE_REVERT_BPS: &str = "base_revert_bps";
 const KEY_LAST_UPDATE_TS:  &str = "last_update_ts";
 const KEY_TOTAL_PUSHES:    &str = "total_pushes";
+const KEY_AUTHORIZED:      &str = "authorized";
 
 fn get_uref(name: &str) -> casper_types::URef {
     runtime::get_key(name)
@@ -42,6 +44,14 @@ fn r_u64(k: &str)  -> u64  { storage::read(get_uref(k)).unwrap_or_revert().unwra
 
 #[no_mangle]
 pub extern "C" fn update() {
+    let caller: AccountHash = runtime::get_caller();
+    let authorized: AccountHash = storage::read(get_uref(KEY_AUTHORIZED))
+        .unwrap_or_revert()
+        .unwrap_or_revert_with(ApiError::User(10));
+    if caller != authorized {
+        runtime::revert(ApiError::User(11));
+    }
+
     let safe: bool    = runtime::get_named_arg("safe");
     let arb_p99: u64  = runtime::get_named_arg("arb_p99_ms");
     let base_p99: u64 = runtime::get_named_arg("base_p99_ms");
@@ -77,7 +87,10 @@ pub extern "C" fn get_state() {
 
 #[no_mangle]
 pub extern "C" fn call() {
+    let deployer: AccountHash = runtime::get_caller();
+
     let mut nk = NamedKeys::new();
+    nk.insert(KEY_AUTHORIZED.into(),      Key::URef(storage::new_uref(deployer)));
     nk.insert(KEY_SAFE.into(),            Key::URef(storage::new_uref(false)));
     nk.insert(KEY_ARB_P99_MS.into(),      Key::URef(storage::new_uref(0u64)));
     nk.insert(KEY_BASE_P99_MS.into(),     Key::URef(storage::new_uref(0u64)));
