@@ -1,6 +1,6 @@
 # Phoenix Zero × Silicon DNA — Casper Sequencer Health Oracle
 
-> **Casper Agentic Buildathon 2026** submission  
+> **Casper Agentic Buildathon 2026** submission
 > Track: On-chain AI services and infrastructure
 
 ---
@@ -9,9 +9,9 @@
 
 An autonomous agent that monitors 6 blockchain sequencers in real time and publishes verified safety data to a **Casper Testnet smart contract** — so any DeFi agent on Casper can check "is it safe to transact right now?" with a single on-chain call.
 
-**Live data since:** March 15, 2026  
-**Chains monitored:** Arbitrum, Base, Optimism, zkSync, Mantle, Casper  
-**Measurements collected:** 206,000+  
+**Live data since:** March 15, 2026
+**Chains monitored:** Arbitrum, Base, Optimism, zkSync, Mantle, Casper
+**Measurements collected:** 206,000+
 **Proven:** MEV war May 31, 2026 — 72.1% revert ratio detected 3 minutes early
 
 ---
@@ -31,31 +31,18 @@ Phoenix Zero (DO NYC1)
 │    ...
 │  ]
 │
-↓ casper_oracle_pusher.py  (autonomous agent, runs every 60s)
+↓ ts-agent/agent.js  (Node.js autonomous agent, checks every 5 min, pushes when safe)
 │
 │  Computes:
-│    safe = arb_revert < 15% AND tension < 0.3 AND r2 > 0.4
-│    Scales floats → basis points for on-chain u64 storage
+│    safe = server_safe AND arb_revert < 15% AND base_p99 < 500ms
 │
 ↓ Casper Testnet — SequencerOracle contract
-   update(safe, p99_ms, revert_ratio_bps, silicon_dna_trust_bps, timestamp)
+   update(safe, arb_p99_ms, base_p99_ms, arb_revert_bps, base_revert_bps, timestamp)
 
 Any Casper DeFi agent:
    oracle.is_safe()  →  true / false
-   oracle.get_state()  →  full metrics snapshot
+   oracle.get_state()  →  full metrics snapshot (JSON string)
 ```
-
----
-
-## Why This Wins
-
-| Metric | Our Oracle | Typical Hackathon Submission |
-|--------|-----------|------------------------------|
-| Data source | 206K+ real measurements | Mock / simulated |
-| Proven accuracy | R²=0.998 causal model | N/A |
-| MEV war proof | May 31 — 72.1% revert documented | N/A |
-| Bot-proof identity | Silicon DNA trust score on-chain | N/A |
-| Lead time | 27 seconds before peak (May 17) | N/A |
 
 ---
 
@@ -63,29 +50,33 @@ Any Casper DeFi agent:
 
 ### 1. Casper Smart Contract (`oracle-contract/`)
 
-Odra (Rust) contract deployed on **Casper Testnet**.
+Raw `casper-contract` 5.1.1 (Rust/WASM) — no Odra abstraction layer.
 
 ```
 Entry points:
-  init()                     — deploy, sets owner
-  update(safe, p99_ms, ...)  — owner only, pushes new state
+  call()                     — deploy, records deployer as authorized caller
+  update(safe, arb_p99_ms, base_p99_ms,
+         arb_revert_bps, base_revert_bps, timestamp)
+                              — authorized caller only, pushes new state
   is_safe() → bool           — any agent reads this
-  get_state() → OracleState  — full snapshot
-  staleness_seconds() → u64  — data freshness check
+  get_state() → String       — full snapshot as JSON
 ```
 
-### 2. Oracle Pusher Agent (`pusher/casper_oracle_pusher.py`)
+`update()` checks the caller against the account that deployed the contract (added after the June deployment — see [DORAHACKS_UPDATE.md](./DORAHACKS_UPDATE.md) for why).
 
-Autonomous Python agent. Reads live signal, computes safety state, pushes to contract.
+### 2. Agent (`ts-agent/agent.js`)
+
+Node.js autonomous agent — the one actually running in production (`systemd` unit `casper-agent.service`). Reads the public feed, decides safe/unsafe, calls `update()` via `call_contract.js`.
 
 ```bash
-cd pusher
-pip install -r requirements.txt
+cd ts-agent
+npm install
 cp .env.example .env
-# fill in CONTRACT_HASH, CASPER_KEY_PATH
-# SIGNAL_URL already set to public feed (no token needed)
-python casper_oracle_pusher.py
+# fill in CASPER_SECRET_KEY_PATH, CONTRACT_HASH
+npm start
 ```
+
+A Python implementation (`pusher/casper_oracle_pusher.py`) also exists in this repo with equivalent logic, but it is not the one deployed — the Node.js agent above is.
 
 ---
 
@@ -97,10 +88,10 @@ Agents that want oracle data pay **$0.001 USDC** via x402:
 GET https://rtt.phoenix-ai.work/api/v1/safe
 → HTTP 402
 → Agent pays $0.001 via x402
-→ { "safe": true, "p99_ms": 45, "revert_ratio": 0.04, "silicon_dna_trust": 0.95 }
+→ { "safe": true, "p99_ms": 45, "revert_ratio": 0.04 }
 ```
 
-When Casper native x402 launches (June 2026), payment switches to Casper-native CSPR.
+Currently settled on Base mainnet. Casper's own x402 Facilitator (`x402-facilitator.cspr.cloud`) launched natively on June 4, 2026 and supports testnet — migration is planned (see `ts-agent/x402-casper-pay.js`, prepared but not yet wired in).
 
 ---
 
@@ -132,34 +123,37 @@ When Casper native x402 launches (June 2026), payment switches to Casper-native 
 ### Deploy Contract to Casper Testnet
 
 ```bash
-# 1. Install Rust + Odra
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-cargo install odra-cli
+# 1. Install Rust nightly + wasm32 target + rust-src (needed for -Z build-std)
+rustup toolchain install nightly --profile minimal
+rustup target add wasm32-unknown-unknown --toolchain nightly
+rustup component add rust-src --toolchain nightly
 
-# 2. Get testnet CSPR
+# 2. Get testnet CSPR (one-time 5000 CSPR grant per account)
 # Faucet: https://testnet.cspr.live/tools/faucet
 
-# 3. Build + deploy
+# 3. Build — must target pure MVP wasm (this network's execution engine
+#    rejects the bulk-memory / sign-ext ops modern LLVM emits by default)
 cd oracle-contract
-cargo odra build
-cargo odra deploy --network testnet
+RUSTFLAGS="-C link-arg=--import-undefined -C target-cpu=mvp" \
+  cargo +nightly build -Z build-std=core,alloc --release --target wasm32-unknown-unknown
 
-# 4. Copy contract hash to pusher/.env
+# 4. Deploy (see ts-agent/deploy_contract.js) and copy the resulting
+#    contract hash into ts-agent/.env as CONTRACT_HASH
 ```
 
 ### Run the Agent
 
 ```bash
-cd pusher
-pip install -r requirements.txt
+cd ts-agent
+npm install
 cp .env.example .env
-# Edit .env: add CONTRACT_HASH, CASPER_KEY_PATH (no token — public feed)
-python casper_oracle_pusher.py
+# Edit .env: CASPER_SECRET_KEY_PATH, CONTRACT_HASH
+npm start
 ```
 
 ---
 
 ## Contact
 
-Aleksandr · Telegram: [@Kentyrk](https://t.me/Kentyrk) · Email: aleksandrkent64@gmail.com  
+Aleksandr · Telegram: [@Kentyrk](https://t.me/Kentyrk) · Email: aleksandrkent64@gmail.com
 DoraHacks: [buidl/43859](https://dorahacks.io/buidl/43859)

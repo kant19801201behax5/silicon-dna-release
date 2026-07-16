@@ -6,7 +6,8 @@ Step-by-step instructions for judges to verify the live system.
 
 ## 1. Verify the Smart Contract On-Chain
 
-**Contract hash:**
+**Active contract hash (redeployed July 16, 2026):**
+
 ```
 hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a
 ```
@@ -15,14 +16,19 @@ hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a
 https://testnet.cspr.live/contract/hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a
 
 You will see:
-- Entry points: `update`, `is_safe`, `get_state`, `staleness_seconds`
-- Named keys: `safe`, `p99_ms`, `revert_ratio_bps`, `silicon_dna_trust_bps`, `timestamp`, `last_update`
+
+- Entry points: `update`, `is_safe`, `get_state`
+- Named keys: `safe`, `arb_p99_ms`, `base_p99_ms`, `arb_revert_bps`, `base_revert_bps`, `last_update_ts`, `total_pushes`, `authorized`
+
+**Original contract (historical proof, 962 real transactions, June 3 – July 6, 2026):**
+`hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d`
 
 ---
 
 ## 2. Verify the Deployer Wallet
 
 **Wallet address:**
+
 ```
 0202494268f650725fb759e6b89bde9a44300a89a02b7d72477eff8894c857c5defb
 ```
@@ -30,7 +36,7 @@ You will see:
 **View on explorer:**
 https://testnet.cspr.live/account/0202494268f650725fb759e6b89bde9a44300a89a02b7d72477eff8894c857c5defb
 
-You will see 60+ deploy transactions — each one is an `update()` call from the autonomous agent.
+Every `update` deploy on this account (against either contract hash above) came from the autonomous agent — the same wallet is used for both.
 
 ---
 
@@ -38,9 +44,8 @@ You will see 60+ deploy transactions — each one is an `update()` call from the
 
 | TX Hash | What it is |
 |---------|------------|
-| `2578359cc8ffcdac8316d6002d3aabed26888c102c8d69a2ccd3239f3fcd3326` | Contract deploy |
-| `4774fdbc61b42e683024a059be624279a2b06a13a654bcebfe1065492b7652f1` | First agent update() |
-| `d841a0c19cd29cfead1f6d834c13ec1325f6ccf7c9030a91a9595ec4aca47a7a` | Manual test tx |
+| `2578359cc8ffcdac8316d6002d3aabed26888c102c8d69a2ccd3239f3fcd3326` | Original contract deploy (June 3, 2026) |
+| `4774fdbc61b42e683024a059be624279a2b06a13a654bcebfe1065492b7652f1` | First agent update() on the original contract |
 
 View any TX: `https://testnet.cspr.live/deploy/<TX_HASH>`
 
@@ -54,17 +59,7 @@ The oracle's source data is publicly readable — no key required:
 curl https://rtt.phoenix-ai.work/api/public-feed
 ```
 
-Response (example):
-```json
-[
-  {"chain": "arbitrum", "p99_ms": 45, "revert_ratio": 0.04, "stall": false, "tension": 0.085},
-  {"chain": "base",     "p99_ms": 38, "revert_ratio": 0.02, "stall": false, "tension": 0.031},
-  {"chain": "optimism", "p99_ms": 51, "revert_ratio": 0.03, "stall": false, "tension": 0.044},
-  {"chain": "zksync",   "p99_ms": 72, "revert_ratio": 0.05, "stall": false, "tension": 0.062},
-  {"chain": "mantle",   "p99_ms": 62, "revert_ratio": 0.02, "stall": false, "tension": 0.041},
-  {"chain": "casper",   "p99_ms": 89, "revert_ratio": 0.01, "stall": false, "tension": 0.018}
-]
-```
+Returns a JSON array of recent readings, one object per ~1-minute tick, each with fields including `arb_p99`, `base_p99`, `arb_revert`, `base_revert`, `ts`, and per-chain z-scores. See the last entry's `ts` (Unix seconds) to confirm the feed is live.
 
 ---
 
@@ -72,51 +67,26 @@ Response (example):
 
 https://rtt.phoenix-ai.work/casper
 
-Shows:
-- Current `safe` state (green/red)
-- Chain health bars (real-time)
-- Agent activity log (last 10 updates)
-- Contract address with testnet.cspr.live link
-
-Refreshes every 30 seconds.
-
 ---
 
-## 6. Run the Pusher Agent Locally
+## 6. Run the Agent Locally (dry run)
 
-Requirements: Python 3.10+, testnet CSPR wallet, Casper node access
+The deployed, production agent is Node.js (`ts-agent/agent.js` — this is what actually runs on the server, not the Python pusher also present in this repo).
 
 ```bash
-git clone https://github.com/kant19801201behax5/casper-agent
-cd casper-agent/pusher
-pip install -r requirements.txt
+git clone https://github.com/kant19801201behax5/silicon-dna-release
+cd silicon-dna-release/casper-agent/ts-agent
+npm install
 cp .env.example .env
+# DRY_RUN=true is set in .env.example — safe to run without a funded key
+npm start
 ```
 
-Edit `.env`:
-```
-CASPER_CONTRACT_HASH=hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a
-CASPER_NODE=65.108.57.149
-CASPER_PORT=7777
-CASPER_KEY_PATH=./keys/your_secret_key.pem
-```
-
-Run:
-```bash
-python casper_oracle_pusher.py
-```
-
-Expected output every 60s:
-```
-[2026-07-09 12:00:01] Fetched oracle: safe=True arb_p99=45ms revert=4.0%
-[2026-07-09 12:00:02] Contract updated → TX: abc123...
-[2026-07-09 12:01:01] Fetched oracle: safe=True arb_p99=48ms revert=3.8%
-[2026-07-09 12:01:02] Contract updated → TX: def456...
-```
+With `DRY_RUN=true`, it logs what it would push every 5 minutes (`CHECK_INTERVAL_MS=300000`) without sending real transactions.
 
 ---
 
-## 7. Run the TypeScript Agent Tests
+## 7. Run the Agent Test Suite
 
 ```bash
 cd casper-agent/ts-agent
@@ -124,59 +94,55 @@ npm install
 npm test
 ```
 
-Expected:
+Expected output:
+
 ```
-  Oracle Safety Logic
-    ✓ safe when all metrics normal
-    ✓ unsafe when arb revert > 15%
-    ✓ unsafe when tension > 0.3
-    ✓ safe when arb revert exactly 14.9%
-    ✓ unsafe when stall detected
-    ✓ handles NaN revert ratio safely
-    ✓ handles missing chain data
-    ✓ unsafe when r2 too low
+🔵 Oracle Safety Logic
+  ✅ Normal conditions → safe
+  ✅ arb_revert exactly at threshold (14.9%) → safe
+  ✅ arb_revert at threshold (15.0%) → unsafe
+  ✅ MEV war May 31: arb_revert=72.1% → unsafe
+  ✅ base_p99=697ms (above 500ms) → unsafe
+  ✅ base_p99=499ms (below 500ms) → safe
+  ✅ server_safe=false → unsafe regardless of metrics
+  ✅ server_safe=true + good metrics → safe
 
-  Oracle Response Parsing
-    ✓ parses valid feed correctly
-    ✓ throws on empty array
-    ✓ throws on null data
-    ✓ handles missing optional fields
+🔵 Oracle Response Parsing
+  ✅ Parses feed and health correctly
+  ✅ Handles null/missing values gracefully
+  ✅ MEV war scenario parsed correctly
+  ✅ Uses LAST data point from feed array
 
-  Basis Points Conversion
-    ✓ converts 0.04 to 400 bps
-    ✓ converts 0.0 to 0 bps
-    ✓ converts 1.0 to 10000 bps
+🔵 Basis Points (for contract storage)
+  ✅ 0.15 → 1500 bps
+  ✅ 0.721 → 7210 bps (MEV war)
+  ✅ 0.0 → 0 bps
 
-15 passing
+Results: 15 passed, 0 failed
 ```
 
 ---
 
 ## 8. Verify Safety Logic
 
-The agent computes `safe` from the public feed:
+The agent computes `safe` from the public feed (`agent.js`, `fetchOracleState()`):
 
-```python
-safe = (
-    arb_revert_ratio < 0.15 and   # < 15% revert
-    tension < 0.3 and              # < 30% MEV tension
-    causal_r2 > 0.4                # causal model confidence
-)
+```js
+const metricsOk = arbRevert < 0.15 && baseP99 < 500; // 15% revert, 500ms P99
+const safe = serverSafe && metricsOk;
 ```
 
-During the **May 31, 2026 MEV war**:
-- `arb_revert_ratio = 0.721` → safe became **false**
-- Oracle published this to Casper Testnet 3 minutes before the acute stall
+During the **May 31, 2026 MEV war**: `arb_revert_ratio` reached `0.721` → `safe` became `false`, and the oracle's off-chain feed reflected this 3 minutes before the acute stall.
 
 ---
 
 ## Summary
 
 | What to check | Where |
-|---------------|-------|
-| Contract exists | testnet.cspr.live/contract/hash-5e45... |
-| 60+ agent txs | testnet.cspr.live/account/020249... |
-| Deploy TX | testnet.cspr.live/deploy/257835... |
+|---|---|
+| Active contract | testnet.cspr.live/contract/hash-2a7ebbc9... |
+| Original contract (962 historical tx) | testnet.cspr.live/contract/hash-5e45d42c... |
+| Agent wallet | testnet.cspr.live/account/020249... |
 | Live data | rtt.phoenix-ai.work/api/public-feed |
 | Dashboard | rtt.phoenix-ai.work/casper |
 | Demo video | https://youtu.be/o-CQfiSfQ4o |

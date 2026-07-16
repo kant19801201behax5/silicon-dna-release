@@ -10,19 +10,6 @@
 | README with documentation | ✅ DONE | README.md complete with architecture + setup |
 | Demo video | ✅ DONE | https://youtu.be/o-CQfiSfQ4o |
 
-## Judging Criteria
-
-| Criterion | Our Score | Evidence |
-|-----------|-----------|---------|
-| Technical execution | ⭐⭐⭐⭐⭐ | Rust/WASM Casper contract + Python pusher + TypeScript SDK + 15 tests |
-| Innovation | ⭐⭐⭐⭐⭐ | Only oracle with 206K+ real datapoints at buildathon. R²=0.998. |
-| AI/Agentic systems | ⭐⭐⭐⭐⭐ | casper_defi_agent.py — autonomous pause/resume. 3,254 unsafe executions blocked. |
-| Real-world application | ⭐⭐⭐⭐⭐ | MEV war May 31 — 72.1% revert documented and verifiable |
-| UX/Design | ⭐⭐⭐ | Dashboard: https://phoenix-zero.vercel.app |
-| Smart contract work | ⭐⭐⭐⭐⭐ | 962 confirmed on-chain transactions. Rust WASM. is_safe() / get_state() / staleness_seconds() |
-| Long-term plans | ⭐⭐⭐⭐⭐ | x402 native, Casper Manifest alignment (4/9 initiatives), machine economy L0 gate |
-| Casper ecosystem impact | ⭐⭐⭐⭐⭐ | Oracle infra for ALL Casper DeFi agents. First physics-bound identity layer on Casper. |
-
 ## Live Proof
 
 | Item | Value |
@@ -64,6 +51,12 @@
 ```
 PUBLIC data → public oracle contract → autonomous agent decisions
      ↓               ↓                        ↓
-rtt.phoenix-ai.work  Casper Testnet     casper_defi_agent.py
-(verifiable)         (on-chain proof)   (962 tx + 3254 blocks)
+rtt.phoenix-ai.work  Casper Testnet     ts-agent/agent.js
+(verifiable)         (on-chain proof)   (Node.js, deployed, runs the real cycle)
 ```
+
+Note: `casper-agent/pusher/casper_defi_agent.py` is a local, off-chain
+demo script (3 hardcoded fake transactions, no Casper SDK, no signing)
+illustrating the pause/resume concept — it is not the deployed agent
+and does not itself touch the chain. The real on-chain agent is
+`ts-agent/agent.js`.

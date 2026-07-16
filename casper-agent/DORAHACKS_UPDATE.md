@@ -27,7 +27,7 @@
 
 **Уровень 1 — Phoenix Zero (оракул сетевой безопасности)**
 
-Производственный оракул RTT проверяет 6 секвенсоров блокчейна каждые 2 секунды. Публикует проверенное состояние безопасности в смарт-контракт тестовой сети Casper каждые 60 секунд через автономного агента.
+Производственный оракул RTT проверяет 6 секвенсоров блокчейна каждые 2 секунды. Публикует проверенное состояние безопасности в смарт-контракт тестовой сети Casper каждые 5 минут через автономного агента (при safe=true).
 
 Отслеживаемые цепочки: Arbitrum One · Base · Optimism · zkSync Era · Mantle · Casper
 
@@ -97,7 +97,7 @@ hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d
 | #4 Smart Accounts для агентов | Классификатор Silicon DNA LEGIT_AGENT vs MALICIOUS_BOT |
 | #5 Compliant Security Tokens | Обнаружение Sybil + предварительная проверка ERC-8004 L0 |
 | #6 Конфиденциальность транзакций | Доказательство ZK-lite (HMAC-SHA256) |
-| #8 Микроплатежи X402 | `/api/v1/safe` — $0.001/вызов, Casper x402 при запуске |
+| #8 Микроплатежи X402 | `/api/v1/safe` — $0.001/вызов, сейчас через Base mainnet, миграция на нативный Casper x402 Facilitator запланирована |
 | #9 Квантово-безопасная крипто | ML-KEM-768 NIST FIPS 203 в каждом рукопожатии агента |
 
 ---
@@ -111,7 +111,7 @@ Phoenix Zero (DO NYC1, live since March 2026)
 autonomous agent (Node.js, runs 24/7)
 ↓
 Casper Testnet Smart Contract
-│  update() called every 60s with live oracle state
+│  update() called every 5 min when safe=true
 ↓
 Any Casper DeFi Agent:
    oracle.is_safe() → true/false before every transaction
@@ -122,7 +122,7 @@ Any Casper DeFi Agent:
 ## Технический стек
 
 - **Смарт-контракт:** Casper 2.0 (casper-contract 5.1.1, Rust/WASM — нативный, без абстракции Odra)
-- **Агент:** Автономный агент Node.js, вызывает `update()` каждые 60 секунд
+- **Агент:** Автономный агент Node.js, вызывает `update()` каждые 5 минут (при safe=true)
 - **Бэкенд Oracle:** Python 3.10, FastAPI, WebSocket-транслятор
 - **Идентификационный слой:** Silicon DNA v5.0 — 12-слойное обнаружение, ML-KEM-768 PQC
 - **Платежи:** протокол x402, сейчас через Base mainnet. Casper x402 Facilitator запущен нативно 4 июня 2026 (поддерживает testnet, `x402-facilitator.cspr.cloud`) — миграция на него запланирована, требует access token от CSPR.cloud
@@ -134,7 +134,8 @@ Any Casper DeFi Agent:
 
 - **Действует с:** 15 марта 2026 г.
 - **Данные:** 206,000+ измерений RTT
-- **On-chain:** 962 подтвержденных обновления · 3254 автономных блока безопасности
+- **On-chain (оригинальный контракт, 3 июня – 6 июля):** 962 подтвержденных обновления · 3254 автономных блока безопасности
+- **On-chain (активный контракт, с 16 июля):** живые обновления каждые 5 минут — см. explorer выше
 - **Casper dashboard:** https://rtt.phoenix-ai.work/casper
 - **Главная панель:** https://phoenix-zero.vercel.app
 - **Публичная лента:** https://rtt.phoenix-ai.work/api/public-feed
@@ -144,12 +145,12 @@ Any Casper DeFi Agent:
 
 ## Как протестировать (пошагово)
 
-**1. Проверить контракт на Casper Testnet Explorer:**
-https://testnet.cspr.live/contract/hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d
+**1. Проверить активный контракт на Casper Testnet Explorer:**
+https://testnet.cspr.live/contract/hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a
 
-Видно: entry points `update`, `is_safe`, `get_state`, `staleness_seconds`
+Видно: entry points `update`, `is_safe`, `get_state`
 
-**2. Проверить 962+ транзакций агента:**
+**2. Проверить транзакции агента (оба контракта, тот же кошелёк):**
 https://testnet.cspr.live/account/0202494268f650725fb759e6b89bde9a44300a89a02b7d72477eff8894c857c5defb
 
 **3. Читать живые данные (без авторизации):**
@@ -169,14 +170,3 @@ npm install && npm test
 ```
 
 Полное руководство: [TESTING_GUIDE.md](./TESTING_GUIDE.md)
-
----
-
-## Почему это побеждает
-
-Большинство участников хакатона отвечают: «Что мне делать?»
-Мы отвечаем: «Могу ли я сделать это безопасно — и являюсь ли я тем, за кого себя выдаю?»
-
-Каждому DeFi-агенту на Casper необходимы оба ответа перед каждой транзакцией.
-Мы — инфраструктура, которая их предоставляет.
-Это не прототип — продукт, запущенный в производство в марте 2026 года.
