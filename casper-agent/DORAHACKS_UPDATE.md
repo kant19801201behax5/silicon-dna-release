@@ -125,7 +125,7 @@ Any Casper DeFi Agent:
 - **Агент:** Автономный агент Node.js, вызывает `update()` каждые 60 секунд
 - **Бэкенд Oracle:** Python 3.10, FastAPI, WebSocket-транслятор
 - **Идентификационный слой:** Silicon DNA v5.0 — 12-слойное обнаружение, ML-KEM-768 PQC
-- **Платежи:** протокол x402 (Base mainnet → Casper нативный после запуска)
+- **Платежи:** протокол x402, сейчас через Base mainnet. Casper x402 Facilitator запущен нативно 4 июня 2026 (поддерживает testnet, `x402-facilitator.cspr.cloud`) — миграция на него запланирована, требует access token от CSPR.cloud
 - **Тесты:** 270/270 Silicon DNA · 15/15 agent tests — 100%
 
 ---
