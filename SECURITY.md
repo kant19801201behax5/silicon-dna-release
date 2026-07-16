@@ -11,4 +11,4 @@ Do not open a public GitHub issue for security vulnerabilities. We aim to acknow
 
 ## Scope
 
-This covers the oracle server (`server.js`), the Casper agent (`casper-agent/`), and the Mantle agent (`mantle-agent/`). Private keys, API tokens, and infrastructure endpoints are never committed to this repository — only `.env.example` templates are provided.
+This covers the Casper agent (`casper-agent/`) and the Mantle agent (`mantle-agent/`). Private keys, API tokens, and infrastructure endpoints are never committed to this repository — only `.env.example` templates are provided.

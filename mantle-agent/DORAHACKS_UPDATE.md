@@ -151,7 +151,7 @@ Any agent reading our oracle paused at 01:07 — **8 minutes before the cascade*
 https://github.com/kant19801201behax5/silicon-dna-release
 
 ```
-/                      — Silicon DNA core (server.js, probe-worker.mjs)
+/                      — Silicon DNA core (probe-worker.mjs)
 /src/                  — Architecture documentation (readable)
 /mantle-agent/         — Mantle Sepolia contract + pusher
 /casper-agent/         — Casper Agentic Buildathon integration

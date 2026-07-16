@@ -130,7 +130,7 @@ This is the data signal that institutional MEV searchers know about but don't pu
 
 | Component | Technology | Location |
 |-----------|-----------|----------|
-| Oracle server | Node.js, WebSocket, Worker Threads | `server.js` |
+| Oracle server (production) | Python, WebSocket | deployed separately, not in this repo |
 | CPU jitter probe | Node.js hrtime() | `probe-worker.mjs` |
 | Dashboard | React + Vite | `dist/` |
 | Mantle contract | Solidity 0.8.20 | `mantle-agent/TuringOracle.sol` |
@@ -157,13 +157,13 @@ This is the data signal that institutional MEV searchers know about but don't pu
 
 ## Quick Start
 
+The production oracle server that powers `rtt.phoenix-ai.work` runs as a set of Python services on the deployment host — it isn't part of this repo's local quick-start path. To run and test the pieces that are:
+
+**Casper agent (this hackathon's submission):** see [casper-agent/README.md](casper-agent/README.md) — `cd casper-agent/ts-agent && npm install && npm test`
+
+**Read the live public feed (no setup needed):**
 ```bash
-git clone https://github.com/kant19801201behax5/silicon-dna-release
-cd silicon-dna-release
-npm install
-node server.js
-# Dashboard: http://localhost:3000
-# Public feed: http://localhost:3000/api/public-feed
+curl https://rtt.phoenix-ai.work/api/public-feed
 ```
 
 **Deploy Mantle oracle:**
