@@ -5,7 +5,8 @@
   "main": "agent.js",
   "scripts": {
     "start": "node agent.js",
-    "dev": "node --watch agent.js"
+    "dev": "node --watch agent.js",
+    "test": "node agent.test.js"
   },
   "dependencies": {
     "@coinbase/x402": "^2.1.0",
