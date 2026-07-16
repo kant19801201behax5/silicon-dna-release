@@ -13,5 +13,8 @@
     "casper-js-sdk": "^3.0.0-rc05",
     "dotenv": "^16.4.5",
     "node-fetch": "^2.7.0"
+  },
+  "overrides": {
+    "ws": "^8.21.0"
   }
 }
