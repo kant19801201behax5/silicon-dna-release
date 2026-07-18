@@ -171,6 +171,16 @@
     .footer a:hover { text-decoration: underline; }
 
     .timestamp { color: #6e7681; font-size: 10px; }
+
+    @media (max-width: 720px) {
+      .header { flex-direction: column; align-items: flex-start; gap: 10px; padding: 16px 20px; }
+      .container { padding: 20px 14px; }
+      .hero { grid-template-columns: 1fr; gap: 20px; padding: 24px 20px; }
+      .status-value { font-size: 40px; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .two-col { grid-template-columns: 1fr; }
+      .footer { flex-direction: column; gap: 8px; align-items: flex-start; padding: 16px 20px; }
+    }
   </style>
 </head>
 <body>
@@ -218,8 +228,8 @@
       <div class="stat-label">Chains monitored (every 2s)</div>
     </div>
     <div class="stat-card">
-      <div class="stat-num" id="tx-count">60+</div>
-      <div class="stat-label">Casper contract updates</div>
+      <div class="stat-num" id="tx-count">962+</div>
+      <div class="stat-label">Casper contract updates (original + active contract)</div>
     </div>
     <div class="stat-card">
       <div class="stat-num">72.1%</div>
@@ -245,36 +255,37 @@
     <div class="card">
       <div class="card-header">
         <div class="card-title">Agent Activity</div>
-        <div class="card-badge">60s interval</div>
+        <div class="card-badge">5 min interval</div>
       </div>
       <div class="card-body" id="agent-feed">
+        <div style="font-size:10px;color:#6e7681;margin-bottom:10px">Recent confirmed update() calls (snapshot, 2026-07-18 12:26 UTC) — this list is not auto-refreshed, click through for the live account history:</div>
         <div class="tx-item">
           <div class="tx-dot safe"></div>
           <div>
-            <div class="tx-hash"><a href="https://testnet.cspr.live/deploy/a1556a4f64ee2232f03bbb719d53101b030bc38b1c5d33ab45eb67a3eb71c43a" target="_blank">a1556a4f...c43a</a></div>
-            <div style="font-size:10px;color:#6e7681">update() — arb=4.76% base_p99=163ms</div>
+            <div class="tx-hash"><a href="https://testnet.cspr.live/deploy/2a789eea6a7bb99b7e0428946a3c8739d1e99fdbb43c466ea339bd5035fc0202" target="_blank">2a789eea...0202</a></div>
+            <div style="font-size:10px;color:#6e7681">update() — arb=2.11% base_p99=8ms</div>
           </div>
-          <div class="tx-meta">~10 min ago</div>
+          <div class="tx-meta">12:26 UTC</div>
         </div>
         <div class="tx-item">
           <div class="tx-dot safe"></div>
           <div>
-            <div class="tx-hash"><a href="https://testnet.cspr.live/deploy/5cb95cf9279721619a0f3a5ae46f4cb4628c688f03a673ec4f31b362c21cc2e3" target="_blank">5cb95cf9...2e3</a></div>
-            <div style="font-size:10px;color:#6e7681">update() — first contract call test</div>
+            <div class="tx-hash"><a href="https://testnet.cspr.live/deploy/4dc452223b55e746bc218acdbd6fb1485d7e477f0d602e38a761976dc5697cd6" target="_blank">4dc45222...cd6</a></div>
+            <div style="font-size:10px;color:#6e7681">update() — arb=1.33% base_p99=12ms</div>
           </div>
-          <div class="tx-meta">~30 min ago</div>
+          <div class="tx-meta">12:21 UTC</div>
         </div>
         <div class="tx-item">
           <div class="tx-dot safe"></div>
           <div>
-            <div class="tx-hash"><a href="https://testnet.cspr.live/deploy/4774fdbc61b42e683024a059be624279a2b06a13a654bcebfe1065492b7652f1" target="_blank">4774fdbc...52f1</a></div>
-            <div style="font-size:10px;color:#6e7681">transfer — first real on-chain tx</div>
+            <div class="tx-hash"><a href="https://testnet.cspr.live/deploy/cc769a2f063209f98a307ce9762c02b3e3eb830707cb9ffdd4f1f3edc2ee1b2c" target="_blank">cc769a2f...1b2c</a></div>
+            <div style="font-size:10px;color:#6e7681">update() — arb=0.81% base_p99=7ms</div>
           </div>
-          <div class="tx-meta">~1h ago</div>
+          <div class="tx-meta">12:16 UTC</div>
         </div>
         <div style="margin-top:12px;font-size:11px;color:#7c3aed;text-align:center">
           <a href="https://testnet.cspr.live/account/0202494268f650725fb759e6b89bde9a44300a89a02b7d72477eff8894c857c5defb" target="_blank">
-            View all transactions on testnet.cspr.live →
+            View live transactions on testnet.cspr.live →
           </a>
         </div>
       </div>
@@ -328,10 +339,15 @@
         <div style="margin-top:16px">
           <div style="font-size:11px;color:#6e7681;margin-bottom:8px">Entry Points:</div>
           <div style="font-size:11px;color:#8b949e;line-height:2">
-            <span style="color:#7c3aed">update()</span> — autonomous agent pushes oracle state<br>
+            <span style="color:#7c3aed">update()</span> — authorized caller only, pushes oracle state<br>
             <span style="color:#3fb950">is_safe()</span> → bool — primary check for DeFi agents<br>
             <span style="color:#3fb950">get_state()</span> → JSON — full snapshot
           </div>
+        </div>
+
+        <div style="margin-top:16px;background:#0d2c0d;border:1px solid #238636;border-radius:6px;padding:10px 12px">
+          <div style="font-size:11px;color:#3fb950;font-weight:600">✓ Caller authorization enforced</div>
+          <div style="font-size:10px;color:#8b949e;margin-top:4px">update() checks the caller against the deploying account on every call — added after the July 16 redeploy so only this agent can write oracle state.</div>
         </div>
 
         <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
