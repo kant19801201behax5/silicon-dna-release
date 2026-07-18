@@ -82,12 +82,12 @@ A Python implementation (`pusher/casper_oracle_pusher.py`) also exists in this r
 
 ## x402 Integration
 
-Agents that want oracle data pay **$0.001 USDC** via x402:
+Agents that want oracle data pay **$0.01 USDC** via x402:
 
 ```
 GET https://rtt.phoenix-ai.work/api/v1/safe
 → HTTP 402
-→ Agent pays $0.001 via x402
+→ Agent pays $0.01 via x402
 → { "safe": true, "p99_ms": 45, "revert_ratio": 0.04 }
 ```
 

@@ -41,7 +41,7 @@
 
 | Initiative | Our Implementation |
 |---|---|
-| #8 X402 Micropayments | Phoenix Zero /api/v1/safe — $0.001/call via x402 |
+| #8 X402 Micropayments | Phoenix Zero /api/v1/safe — $0.01/call via x402 |
 | #9 Quantum-Safe Cryptography | ML-KEM-768 (NIST FIPS 203) in Silicon DNA L0 |
 | #5 Compliant Security Tokens | Silicon DNA Sybil detection + ERC-8004 L0 gate |
 | #3 Smart Accounts for Agents | LEGIT_AGENT vs MALICIOUS_BOT 3-class classifier |

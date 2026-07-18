@@ -144,11 +144,11 @@ Any agent reading our oracle paused at 01:07 — **8 minutes before the cascade*
 | Target customer | Proposed pricing | What they'd buy |
 |----------|---------|---------------|
 | MEV searchers | $200–500/mo | Real-time revert ratio + RTT feed |
-| DeFi protocols | $0.001/call | Per-verification via x402 micropayment (live today) |
+| DeFi protocols | $0.01/call | Per-verification via x402 micropayment (live today) |
 | Hedge funds | $500–2000 | Historical dataset for backtesting |
 | AI agent infrastructure | $50–200/mo | Silicon DNA identity verification API |
 
-The only revenue mechanism actually live today is the $0.001/call x402
+The only revenue mechanism actually live today is the $0.01/call x402
 micropayment on `/api/v1/safe`. The rest of this table is a proposed
 go-to-market, not existing paying customers.
 

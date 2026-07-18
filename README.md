@@ -145,7 +145,7 @@ This is the data signal that institutional MEV searchers know about but don't pu
 
 **Who pays for this data:**
 - MEV searchers: $200–500/mo for real-time revert ratio feeds
-- DeFi protocols: pay-per-call via x402 ($0.001/verification)
+- DeFi protocols: pay-per-call via x402 ($0.01/verification)
 - Hedge funds: historical dataset for backtesting ($500–2000/dataset)
 
 **Go-to-market:**
