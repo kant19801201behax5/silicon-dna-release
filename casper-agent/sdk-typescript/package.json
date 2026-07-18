@@ -4,6 +4,7 @@
   "description": "Phoenix Zero Sequencer Health Oracle — TypeScript SDK for Casper DeFi agents",
   "main": "dist/casper-oracle-reader.js",
   "types": "dist/casper-oracle-reader.d.ts",
+  "type": "commonjs",
   "scripts": {
     "build": "tsc",
     "demo": "ts-node casper-oracle-reader.ts"

@@ -12,6 +12,20 @@
  *   const oracle = new SequencerOracleClient(CONTRACT_HASH);
  *   const safe = await oracle.isSafe();
  *   if (safe) { await submitTransaction(); }
+ *
+ * STATUS (2026-07-18): INCOMPLETE — do not present as working yet.
+ * Verified two real bugs and fixed them: a CJS/ESM import crash, and a dead
+ * default RPC URL (rpc.testnet.casperlabs.io no longer resolves — casper-js-sdk
+ * v2.15.4 predates the current node.testnet.casper.network naming). After
+ * both fixes, getState() still fails with 'value was not found in the global
+ * state' against the real deployed contract. Root cause is very likely the
+ * same one that broke the original oracle contract earlier in this project:
+ * casper-js-sdk v2.15.4's getBlockState() predates Casper's entity-model
+ * addressing (protocol 2.x) and queries state the old way. This SDK was most
+ * likely written earlier, before that protocol upgrade, and never revisited.
+ * Fixing it properly means rewriting getState() against the current
+ * entity-model query API — real work, not a quick patch. Revisit this file
+ * before treating it as a deliverable.
  */
 
 import { CasperServiceByJsonRPC } from "casper-js-sdk";
@@ -45,7 +59,7 @@ export class SequencerOracleClient {
 
   constructor(
     contractHash: string,
-    nodeUrl = "https://rpc.testnet.casperlabs.io",
+    nodeUrl = "https://node.testnet.casper.network/rpc",
     maxStaleSec = 180
   ) {
     this.contractHash  = contractHash.replace("hash-", "");
