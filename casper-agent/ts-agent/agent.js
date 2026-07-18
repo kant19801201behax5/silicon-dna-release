@@ -17,6 +17,7 @@
 require('dotenv').config();
 const fetch = require('node-fetch');
 const { DeployUtil, Keys } = require('casper-js-sdk');
+const { SpendingLimiter } = require('./spending-limit');
 const fs = require('fs');
 
 const NODE_URL     = process.env.CASPER_NODE_URL   || 'https://rpc.testnet.casperlabs.io';
@@ -30,6 +31,11 @@ const DRY_RUN      = process.env.DRY_RUN === 'true';
 
 const ARB_REVERT_MAX = 0.15;
 const BASE_P99_MAX   = 500;
+
+// Smart-account-style guardrail: agent never spends more than this per UTC
+// day on x402 micropayments, regardless of which payment rail is active.
+const X402_DAILY_LIMIT_USDC = parseFloat(process.env.X402_DAILY_LIMIT_USDC || '1.00');
+const spendLimiter = new SpendingLimiter(X402_DAILY_LIMIT_USDC);
 
 function log(level, msg) {
   const ts = new Date().toISOString().replace('T', ' ').slice(0, 19);
@@ -51,7 +57,11 @@ async function probeX402() {
         const usdcAmt = (parseInt(accept.amount || '0') / 1e6).toFixed(4);
         log('X402', `402 received: $${usdcAmt} USDC on ${accept.network}`);
         log('X402', `  pay_to=${(accept.payTo || '').slice(0, 14)}... asset=USDC scheme=${accept.scheme}`);
-        log('X402', '  Falling back to public feed (x402 requires funded Base wallet)');
+        if (!spendLimiter.canSpend(parseFloat(usdcAmt))) {
+          log('X402', `  Daily spending cap ($${X402_DAILY_LIMIT_USDC} USDC) reached — would decline this payment even with a funded wallet`);
+        } else {
+          log('X402', '  Falling back to public feed (x402 requires funded Base wallet)');
+        }
       }
       return null;
     }

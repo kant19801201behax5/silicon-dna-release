@@ -24,7 +24,7 @@ jobs:
         run: npm install
         working-directory: casper-agent/ts-agent
 
-      - name: Run tests (15/15)
+      - name: Run tests (21/21)
         run: npm test
         working-directory: casper-agent/ts-agent
 

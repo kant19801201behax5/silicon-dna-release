@@ -118,7 +118,15 @@ Expected output:
   ✅ 0.721 → 7210 bps (MEV war)
   ✅ 0.0 → 0 bps
 
-Results: 15 passed, 0 failed
+🔵 Spending Limiter (x402 daily cap)
+  ✅ Allows spend under the cap
+  ✅ Blocks spend over the cap
+  ✅ Tracks cumulative spend within the same day
+  ✅ recordSpend throws once the cap would be exceeded
+  ✅ remaining() reflects spend so far
+  ✅ constructor rejects a non-positive limit
+
+Results: 21 passed, 0 failed
 ```
 
 ---

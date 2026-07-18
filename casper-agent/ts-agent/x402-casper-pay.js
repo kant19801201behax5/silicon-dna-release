@@ -21,13 +21,24 @@
  *   4. Test with a tiny amount against a real 402 response before relying
  *      on this — it has not been run against the live facilitator.
  *
+ * Enforces the same daily USDC spending cap as agent.js's Base x402 path
+ * (see spending-limit.js) — pass a shared SpendingLimiter instance in to
+ * keep both payment rails under one combined budget.
+ *
  * Reference: github.com/make-software/casper-x402
  * (js/packages/mechanisms/casper/src/exact/client/scheme.ts, signer.ts)
  */
 
 'use strict';
 
-async function payCasperX402(url, options = {}) {
+const { SpendingLimiter } = require('./spending-limit');
+
+// Same smart-account-style guardrail used by agent.js's Base x402 path —
+// shared here so both payment rails obey one daily cap regardless of which
+// one ends up active. Pass a limiter in to share state across calls; a
+// fresh one is created per call otherwise (cap still enforced, just not
+// shared with other call sites).
+async function payCasperX402(url, options = {}, limiter = null) {
   const {
     ExactCasperScheme,
     createClientCasperSigner,
@@ -53,6 +64,12 @@ async function payCasperX402(url, options = {}) {
     throw new Error('x402: no Casper payment option offered by resource server');
   }
 
+  const amountUsdc = parseInt(paymentRequirements.amount || '0', 10) / 1e6;
+  const cap = limiter || new SpendingLimiter(parseFloat(process.env.X402_DAILY_LIMIT_USDC || '1.00'));
+  if (!cap.canSpend(amountUsdc)) {
+    throw new Error(`x402: daily spending cap reached, declining $${amountUsdc} payment`);
+  }
+
   // 2. Build and sign the payment payload.
   const paymentPayloadResult = await scheme.createPaymentPayload(x402Version, paymentRequirements);
 
@@ -65,6 +82,10 @@ async function payCasperX402(url, options = {}) {
       'PAYMENT-SIGNATURE': paymentHeader,
     },
   });
+
+  if (secondResp.ok) {
+    cap.recordSpend(amountUsdc);
+  }
 
   return secondResp;
 }

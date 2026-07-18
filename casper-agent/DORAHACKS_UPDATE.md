@@ -98,7 +98,7 @@ hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d
 | Инициатива | Наша реализация |
 |---|---|
 | #1 Совместимость с EVM | Мониторинг 5 цепочек EVM (Arb, Base, OP, ZK, Mantle) |
-| #4 Smart Accounts для агентов | Классификатор Silicon DNA LEGIT_AGENT vs MALICIOUS_BOT |
+| #4 Smart Accounts для агентов | Дневной лимит трат на x402-платежи (`ts-agent/spending-limit.js`) — агент не может потратить больше заданного лимита в день ни на одном из платёжных рельсов, лимит проверяется до попытки платежа |
 | #5 Compliant Security Tokens | Обнаружение Sybil + предварительная проверка ERC-8004 L0 |
 | #6 Конфиденциальность транзакций | Доказательство ZK-lite (HMAC-SHA256) |
 | #8 Микроплатежи X402 | `/api/v1/safe` — $0.001/вызов, сейчас через Base mainnet, миграция на нативный Casper x402 Facilitator запланирована |
@@ -130,7 +130,7 @@ Any Casper DeFi Agent:
 - **Бэкенд Oracle:** Python 3.10, FastAPI, WebSocket-транслятор
 - **Идентификационный слой:** Silicon DNA v5.0 — 12-слойное обнаружение, ML-KEM-768 PQC
 - **Платежи:** протокол x402, сейчас через Base mainnet. Casper x402 Facilitator запущен нативно 4 июня 2026 (поддерживает testnet, `x402-facilitator.cspr.cloud`) — миграция на него запланирована, требует access token от CSPR.cloud
-- **Тесты:** 270/270 Silicon DNA · 15/15 agent tests — 100%
+- **Тесты:** 270/270 Silicon DNA · 21/21 agent tests — 100%
 
 ---
 
@@ -186,7 +186,7 @@ https://rtt.phoenix-ai.work/casper
 git clone https://github.com/kant19801201behax5/silicon-dna-release
 cd silicon-dna-release/casper-agent/ts-agent
 npm install && npm test
-# Expected: 15 passing
+# Expected: 21 passing
 ```
 
 Полное руководство: [TESTING_GUIDE.md](./TESTING_GUIDE.md)

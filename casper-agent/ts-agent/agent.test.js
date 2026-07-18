@@ -147,6 +147,47 @@ test('0.0 → 0 bps', () => {
   assertEqual(Math.round(0.0 * 10000), 0, 'Zero revert');
 });
 
+// ── Spending limiter tests (smart-account-style guardrail) ───────────────────
+console.log('\n🔵 Spending Limiter (x402 daily cap)');
+const { SpendingLimiter } = require('./spending-limit');
+
+test('Allows spend under the cap', () => {
+  const l = new SpendingLimiter(1.00);
+  assert(l.canSpend(0.50), 'Should allow $0.50 against $1.00 cap');
+});
+
+test('Blocks spend over the cap', () => {
+  const l = new SpendingLimiter(1.00);
+  assert(!l.canSpend(1.50), 'Should block $1.50 against $1.00 cap');
+});
+
+test('Tracks cumulative spend within the same day', () => {
+  const l = new SpendingLimiter(1.00);
+  l.recordSpend(0.60);
+  assert(!l.canSpend(0.60), '$0.60 + $0.60 exceeds $1.00 cap');
+  assert(l.canSpend(0.40), '$0.60 + $0.40 is exactly at the cap');
+});
+
+test('recordSpend throws once the cap would be exceeded', () => {
+  const l = new SpendingLimiter(1.00);
+  l.recordSpend(1.00);
+  let threw = false;
+  try { l.recordSpend(0.01); } catch (e) { threw = true; }
+  assert(threw, 'recordSpend should throw when over cap, not silently over-spend');
+});
+
+test('remaining() reflects spend so far', () => {
+  const l = new SpendingLimiter(1.00);
+  l.recordSpend(0.30);
+  assertEqual(l.remaining().toFixed(2), '0.70', 'Remaining budget after $0.30 spent');
+});
+
+test('constructor rejects a non-positive limit', () => {
+  let threw = false;
+  try { new SpendingLimiter(0); } catch (e) { threw = true; }
+  assert(threw, 'A zero or negative daily limit is not a valid guardrail');
+});
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 console.log(`\n${'─'.repeat(40)}`);
 console.log(`Results: ${passed} passed, ${failed} failed`);
