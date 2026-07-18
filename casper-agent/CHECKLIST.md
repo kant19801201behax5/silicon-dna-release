@@ -60,3 +60,9 @@ demo script (3 hardcoded fake transactions, no Casper SDK, no signing)
 illustrating the pause/resume concept — it is not the deployed agent
 and does not itself touch the chain. The real on-chain agent is
 `ts-agent/agent.js`.
+
+## Known Incomplete Work
+
+| Item | Status |
+|---|---|
+| `casper-agent/sdk-typescript/casper-oracle-reader.ts` | ⚠️ Not working yet. Third-party TypeScript SDK for reading oracle state. Two real bugs found and fixed (CJS/ESM import crash, dead default RPC URL). A third issue remains: the state-query method predates Casper's entity-model addressing (protocol 2.x) and needs to be rewritten against the current query API — see the status note at the top of the file. Do not present this as a working deliverable until that's done. |
