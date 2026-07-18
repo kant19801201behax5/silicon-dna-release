@@ -130,7 +130,7 @@ Any Casper DeFi Agent:
 - **Бэкенд Oracle:** Python 3.10, FastAPI, WebSocket-транслятор
 - **Идентификационный слой:** Silicon DNA v5.0 — 12-слойное обнаружение, ML-KEM-768 PQC
 - **Платежи:** протокол x402, сейчас через Base mainnet. Casper x402 Facilitator запущен нативно 4 июня 2026 (поддерживает testnet, `x402-facilitator.cspr.cloud`) — миграция на него запланирована, требует access token от CSPR.cloud
-- **Тесты:** 270/270 Silicon DNA · 21/21 agent tests — 100%
+- **Тесты:** 280/280 Silicon DNA · 21/21 agent tests — 100%
 
 ---
 
