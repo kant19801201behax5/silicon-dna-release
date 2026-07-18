@@ -114,7 +114,7 @@ contract MyMantleProtocol {
 |-------|---------------|
 | L0 | CPU jitter physics (sub-microsecond, cannot be faked by VMs) |
 | L1 | ML-KEM-768 quantum channel (NIST FIPS 203) |
-| L2 | JA3/JA4 TLS fingerprint vs bot library database |
+| L2 | TLS fingerprint vs bot library database — currently a fixed placeholder, real JA4 needs raw ClientHello access unavailable behind Cloudflare's free tier |
 | L3 | Behavioral rhythm (mouse events, timing patterns) |
 | L4 | Argon2 Proof-of-Work (200ms compute cost per session) |
 | L5 | Silicon Hash (session identity chain) |

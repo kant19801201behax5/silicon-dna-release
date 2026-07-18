@@ -23,10 +23,15 @@ L1  ML-KEM-768 Channel (NIST FIPS 203)
     Proves:    client has real compute (cannot be trivially spoofed)
     Verdict:   kem_pass = boolean
 
-L2  JA3/JA4 TLS Fingerprint
-    Captures:  TLS ClientHello cipher suites, extensions, elliptic curves
+L2  TLS Fingerprint (JA4 — not yet implemented, currently a fixed placeholder)
+    Intended:  TLS ClientHello cipher suites, extensions, elliptic curves
     Database:  known bot library signatures (Puppeteer, Playwright, curl, etc.)
-    Verdict:   ja3_score = 0.0 (known bot) → 1.0 (clean browser)
+    Verdict:   ja3_score = 0.5 (fixed) — JA3 itself is obsolete since Chrome 110
+               randomized TLS extension order (Jan 2023); JA4 is the current
+               standard but reading the raw ClientHello isn't possible once
+               traffic is proxied through Cloudflare without their paid Bot
+               Management tier. Honestly disclosed here rather than silently
+               left implied as working.
 
 L3  Behavioral Rhythm
     Measures:  mouse events, keypress timing, scroll velocity
@@ -93,7 +98,7 @@ L11 Composite Trust Score
   "layers": {
     "jitter": 0.91,
     "kem": true,
-    "ja3": 0.88,
+    "ja3": 0.5,
     "behavioral": 0.95,
     "pow": true
   },

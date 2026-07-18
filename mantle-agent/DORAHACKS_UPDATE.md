@@ -37,7 +37,7 @@ Warning:  >15%   (MEV activity starting)
 MEV war:   72%   (May 31, 2026 — documented event)
 ```
 
-Causal model (SGD regression, Pearson R²): **R²=0.998 for gas_pressure_velocity**
+Causal model (online SGD regression, Pearson R²): **R²=0.998** at steady state (best-performing predictor is a gas-pressure-derived velocity term — see `src/CAUSAL_ENGINE.md` for method, exact configuration is not published)
 
 This signal precedes visible gas price spikes by **27 seconds** on average. That's the same edge that institutional MEV searchers have — but we measured it from first principles.
 
@@ -47,7 +47,11 @@ This signal precedes visible gas price spikes by **27 seconds** on average. That
 
 **On-chain oracle: TuringOracle.sol**
 
-Deployed on Mantle Sepolia Testnet. Updates every 60 seconds.
+Deployed on Mantle Sepolia Testnet — designed to update every 60 seconds via
+an autonomous pusher agent. Contract itself is live and verified on-chain;
+the pusher's wallet ran out of testnet gas on 2026-07-08 and is currently
+unfunded (a few thousandths of a MNT short) — refuel in progress, updates
+resume automatically once funded.
 
 ```solidity
 // Any Mantle DeFi protocol gets live network intelligence:
@@ -78,7 +82,9 @@ Beyond network data, Silicon DNA classifies every web connection:
 | LEGIT_AGENT | >0.45 | Verified AI agent |
 | MALICIOUS_BOT | ≤0.45 | Adversarial, dropped |
 
-12-layer pipeline: CPU jitter physics → ML-KEM-768 post-quantum → JA3 fingerprint → Behavioral rhythm → Argon2 PoW → Reputation → Anomaly detection → Network telemetry → Causal engine.
+12-layer pipeline: CPU jitter physics → ML-KEM-768 post-quantum → TLS fingerprint (currently a fixed placeholder value pending a real JA4 implementation — see note below) → Behavioral rhythm → Argon2 PoW → Reputation → Anomaly detection → Network telemetry → Causal engine.
+
+Note on the TLS fingerprint layer: real JA4 fingerprinting requires reading the raw TLS ClientHello, which isn't visible to the origin server once traffic is proxied through Cloudflare (a paid Bot Management tier would expose it via headers). This layer is currently a fixed placeholder in the live code, honestly disclosed here rather than left silently implied as working.
 
 **Why CPU jitter is bot-proof:** physical thermal noise creates timing signatures that VMs cannot replicate. Accuracy >99.5% in distinguishing real hardware from containers.
 
@@ -133,16 +139,20 @@ Any agent reading our oracle paused at 01:07 — **8 minutes before the cascade*
 
 ---
 
-### Business Model
+### Business Model (target, not yet under contract)
 
-| Customer | Revenue | What They Buy |
+| Target customer | Proposed pricing | What they'd buy |
 |----------|---------|---------------|
 | MEV searchers | $200–500/mo | Real-time revert ratio + RTT feed |
-| DeFi protocols | $0.001/call | Per-verification via x402 micropayment |
+| DeFi protocols | $0.001/call | Per-verification via x402 micropayment (live today) |
 | Hedge funds | $500–2000 | Historical dataset for backtesting |
 | AI agent infrastructure | $50–200/mo | Silicon DNA identity verification API |
 
-**Total addressable:** 200+ active MEV searchers on Arbitrum alone. 50+ DeFi protocols on Mantle.
+The only revenue mechanism actually live today is the $0.001/call x402
+micropayment on `/api/v1/safe`. The rest of this table is a proposed
+go-to-market, not existing paying customers.
+
+**Total addressable (market sizing, not signed customers):** 200+ active MEV searchers on Arbitrum alone. 50+ DeFi protocols on Mantle.
 
 ---
 

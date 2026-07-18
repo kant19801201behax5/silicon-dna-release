@@ -41,14 +41,14 @@ Phoenix Zero (DigitalOcean NYC1)
 │    Measures: RTT P99, revert ratio, stall flags, blob fees
 │
 ↓  Causal Engine (R²=0.998)
-│    SGD regression on 26 network variables
-│    Best predictor: gas_pressure_velocity (state[498])
+│    Online SGD regression across the RTT/gas/revert telemetry feed
+│    Also powers other internal Phoenix Zero systems not part of this repo
 │    arb_revert_ratio → network stress with 27-second lead time
 │
 ↓  Silicon DNA (12-layer classifier)
 │    L0: CPU jitter physics (probe-worker.mjs)
 │    L1: ML-KEM-768 post-quantum channel (NIST FIPS 203)
-│    L2: JA3/JA4 TLS fingerprint
+│    L2: TLS fingerprint (placeholder pending real JA4 — see src/SILICON_DNA_LAYERS.md)
 │    L3: Behavioral rhythm analysis
 │    L4: Argon2 proof-of-work (200ms bot tax)
 │    L5-L11: reputation, anomaly, timing, telemetry, causal
@@ -83,7 +83,7 @@ require(oracle.is_legitimate(), "Silicon DNA: traffic not verified");
 | Total measurements | 206,000+ RTT samples |
 | Data collection start | March 15, 2026 |
 | Chains monitored | Mantle, Arbitrum, Base, Optimism, zkSync, Ethereum L1 |
-| Causal model R² | 0.998 (gas_pressure_velocity) |
+| Causal model R² | 0.998 |
 | Best lead time proven | 27 seconds before MEV peak (May 17, 2026) |
 | MEV war documented | May 31, 2026 — 72.1% revert ratio |
 | Dashboard | https://phoenix-zero.vercel.app |
