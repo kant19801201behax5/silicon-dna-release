@@ -82,7 +82,7 @@ require(oracle.is_legitimate(), "Silicon DNA: traffic not verified");
 |--------|-------|
 | Total measurements | 206,000+ RTT samples |
 | Data collection start | March 15, 2026 |
-| Chains monitored | Mantle, Arbitrum, Base, Optimism, zkSync, Ethereum L1 |
+| Chains monitored | Mantle, Arbitrum, Base, Optimism, zkSync, Casper (6 chains; Ethereum L1 also probed separately for blob-fee/gas-pressure signals) |
 | Causal model R² | 0.998 |
 | Best lead time proven | 27 seconds before MEV peak (May 17, 2026) |
 | MEV war documented | May 31, 2026 — 72.1% revert ratio |

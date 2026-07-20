@@ -24,7 +24,7 @@ Silicon DNA changes that.
 **14 months of continuous blockchain telemetry collection**, turned into a live causal intelligence system.
 
 **Phoenix Zero** probes 6 chains every 2 seconds:
-- Mantle, Arbitrum, Base, Optimism, zkSync, Ethereum L1
+- Mantle, Arbitrum, Base, Optimism, zkSync, Casper (Ethereum L1 also probed separately for blob-fee/gas-pressure)
 - Measures: RTT P99, transaction revert ratios, stall detection, blob fees
 
 **The Discovery: arb_revert_ratio as a leading indicator**
@@ -49,9 +49,11 @@ This signal precedes visible gas price spikes by **27 seconds** on average. That
 
 Deployed on Mantle Sepolia Testnet — designed to update every 60 seconds via
 an autonomous pusher agent. Contract itself is live and verified on-chain;
-the pusher's wallet ran out of testnet gas on 2026-07-08 and is currently
-unfunded (a few thousandths of a MNT short) — refuel in progress, updates
-resume automatically once funded.
+the pusher's wallet ran out of testnet gas on 2026-07-08 and remains
+unfunded as of this update (a few thousandths of a MNT short, confirmed via
+live RPC balance check) — every push attempt since has failed with
+insufficient-funds. A testnet faucet refuel (free, ~2 minutes) will resume
+updates immediately; not yet done.
 
 ```solidity
 // Any Mantle DeFi protocol gets live network intelligence:
@@ -86,7 +88,7 @@ Beyond network data, Silicon DNA classifies every web connection:
 
 Note on the TLS fingerprint layer: real JA4 fingerprinting requires reading the raw TLS ClientHello, which isn't visible to the origin server once traffic is proxied through Cloudflare (a paid Bot Management tier would expose it via headers). This layer is currently a fixed placeholder in the live code, honestly disclosed here rather than left silently implied as working.
 
-**Why CPU jitter is bot-proof:** physical thermal noise creates timing signatures that VMs cannot replicate. Accuracy >99.5% in distinguishing real hardware from containers.
+**CPU jitter layer:** measures nanosecond-scale timing variance between consecutive `hrtime.bigint()` calls — real OS/hardware scheduling jitter, though not a deliberately-engineered physical noise source. The ">99.5% accuracy" figure is not currently backed by a measured validation dataset in this repo and should be treated as a target, not a verified result.
 
 ---
 

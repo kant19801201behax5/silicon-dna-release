@@ -18,7 +18,7 @@
 | Active contract deployed | July 16, 2026 |
 | Original contract hash | hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d (June 3 – July 6, 2026) |
 | Total on-chain updates | 962 (original) + ongoing (active) |
-| Safety gate blocks | 3,254 (autonomous decisions) |
+| Safety gate blocks | 3,254 (autonomous decisions) — ⚠️ historical count from the original contract's period (Jun 3–Jul 6); no live counter for this exists in the current deployed `agent.js`, so this figure cannot be independently re-derived from current logs |
 | Wallet | 0202494268f650725fb759e6b89bde9a44300a89a02b7d72477eff8894c857c5defb |
 | Explorer | https://testnet.cspr.live |
 | Dashboard | https://phoenix-zero.vercel.app |

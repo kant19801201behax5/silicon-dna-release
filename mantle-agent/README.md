@@ -17,7 +17,7 @@ Any Mantle DeFi protocol can call `is_legitimate()` to get real-time bot/human t
 ```
 Silicon DNA Server (DO NYC1)
 │  12-layer classification: HUMAN / LEGIT_AGENT / MALICIOUS_BOT
-│  Monitors: Mantle, Arbitrum, Base, Optimism, zkSync, Ethereum
+│  Monitors: Mantle, Arbitrum, Base, Optimism, zkSync, Casper (6 chains; Ethereum L1 probed separately for blob-fee/gas-pressure)
 │
 ↓ mantle_pusher.js  (runs every 60s)
 │  Reads: trust_score, bot_ratio, mantle_safe, p99_ms
