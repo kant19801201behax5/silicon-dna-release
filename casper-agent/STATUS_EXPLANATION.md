@@ -1,28 +1,30 @@
-> **[UPDATE 2026-07-16 — ПРОБЛЕМА РЕШЕНА]** Письмо ниже описывает состояние на 6 июля 2026
-> (старый кошелёк исчерпал разовый фаусет-грант). С 16 июля 2026 контракт **передеплоен**
-> (`hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a`) и снова принимает
-> `update()` каждые 5 минут — см. [CHECKLIST.md](./CHECKLIST.md) и [DORAHACKS_UPDATE.md](./DORAHACKS_UPDATE.md)
-> для актуального статуса. Письмо ниже сохранено как есть — историческое доказательство
-> (962 транзакции, 3 июня – 6 июля) остаётся верным и проверяемым.
+> **[UPDATE 2026-07-16 — ISSUE RESOLVED]** The letter below describes the state as of
+> July 6, 2026 (the old wallet had exhausted its one-time faucet grant). As of July 16,
+> 2026 the contract has been **redeployed**
+> (`hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a`) and is once
+> again accepting `update()` every 5 minutes — see [CHECKLIST.md](./CHECKLIST.md) and
+> [DORAHACKS_UPDATE.md](./DORAHACKS_UPDATE.md) for current status. The letter below is
+> kept as-is — the historical proof (962 transactions, June 3 – July 6) remains valid
+> and verifiable.
 
-Здравствуйте,
+Hello,
 
-По поводу "Phoenix Zero — x402 Sequencer Health Oracle for Autonomous DeFi Agents" — проверили и нашли точную причину.
+Regarding "Phoenix Zero — x402 Sequencer Health Oracle for Autonomous DeFi Agents" — we checked and found the exact cause.
 
-Контракт и агент рабочие, проблема в лимите тестового фаусета Casper, а не в коде.
+The contract and agent are working; the issue is a Casper testnet faucet limit, not the code.
 
-Факты:
+Facts:
 
-1. Контракт задеплоен и подтверждается напрямую в блокчейне:
+1. The contract is deployed and directly verifiable on-chain:
 hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d
 https://testnet.cspr.live/account/0202494268f650725fb759e6b89bde9a44300a89a02b7d72477eff8894c857c5defb
 
-2. В истории транзакций видно 962 подтверждённых вызова update() — оракул непрерывно проработал 33 дня (с 3 июня по 6 июля 2026), публикуя данные в контракт каждый раз, когда сеть была в безопасном состоянии (агент сознательно пропускает платный вызов при unsafe-состоянии сети, экономя газ — это штатная логика, а не сбой).
+2. The transaction history shows 962 confirmed update() calls — the oracle ran continuously for 33 days (June 3 to July 6, 2026), publishing data to the contract every time the network was in a safe state (the agent deliberately skips the paid call when the network is unsafe, saving gas — this is normal logic, not a failure).
 
-3. Фаусет Casper Testnet выдаёт 5000 CSPR один раз на аккаунт, без возможности повторного запроса (официальное ограничение самого Casper, не наше решение). Этот кошелёк исчерпал свой разовый лимит именно на эти 962 успешных вызова — 5000 CSPR ÷ 5 CSPR за вызов ≈ 1000, что совпадает с фактическим числом транзакций.
+3. The Casper Testnet faucet grants 5000 CSPR once per account, with no way to request more (an official Casper limit, not our design decision). This wallet used up its one-time grant on exactly these 962 successful calls — 5000 CSPR ÷ 5 CSPR per call ≈ 1000, which matches the actual transaction count.
 
-4. С 6 июля агент на сервере продолжает работать (сервис активен, не падал ни разу), но каждая новая попытка отклоняется нодой с ошибкой insufficient balance — это ограничение сети, а не сбой инфраструктуры или контракта.
+4. Since July 6, the agent on the server has kept running (the service is active, has never crashed), but every new attempt is rejected by the node with an insufficient balance error — this is a network-level limit, not an infrastructure or contract failure.
 
-Собственных тестовых CSPR для повторного пополнения у нас нет — фаусет Casper выдаёт грант только один раз на аккаунт, и этот лимит уже полностью ушёл на те самые 962 транзакции.
+We have no testnet CSPR of our own to top it up with — the Casper faucet only grants once per account, and that grant has already been fully spent on those same 962 transactions.
 
-Поэтому просим либо принять историю транзакций в блокчейн-проводнике как подтверждение работоспособности (962 вызова update() за 33 дня — полностью проверяемо и никуда не исчезает), либо, если для ревью нужна активность прямо сейчас, подсказать вариант, как пополнить адрес дополнительно. Готовы сделать любой шаг, который вы порекомендуете.
+So we're asking either to accept the transaction history on the block explorer as proof the system works (962 update() calls over 33 days — fully verifiable and not going anywhere), or, if the review needs activity happening right now, to suggest a way to fund the address further. We're ready to take whatever step you'd recommend.

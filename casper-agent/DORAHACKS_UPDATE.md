@@ -1,39 +1,39 @@
 # DoraHacks BUIDL — Casper Agentic Buildathon 2026
-# Финальный текст для страницы BUIDL
+# Final text for the BUIDL page
 
 ---
 
-## Проблема
+## The Problem
 
-Автономные DeFi-агенты сталкиваются с двумя критическими недостатками:
+Autonomous DeFi agents face two critical shortcomings:
 
-**1 — Сетевая слепота:** Во время войн MEV коэффициенты отмены L2-секвенсоров резко возрастают с 5-8% до 70%+. Агент, отправляющий транзакции, теряет газ при каждой неудачной попытке — 7 из 10 транзакций отменяются без исполнения.
+**1 — Network blindness:** During MEV wars, L2 sequencer revert ratios spike sharply from 5-8% to 70%+. An agent sending transactions loses gas on every failed attempt — 7 out of 10 transactions revert without executing.
 
-**2 — Отсутствие идентификации:** Машинной экономике Casper необходимы «первые миллиард машин», способные совершать транзакции автономно. Но без проверки личности любой вредоносный бот может совершать платежи x402, истощать ликвидность или манипулировать управлением — неотличимый от легитимного ИИ-агента.
+**2 — No identity verification:** Casper's machine economy needs "the first billion machines" able to transact autonomously. But without identity verification, any malicious bot can make x402 payments, drain liquidity, or manipulate governance — indistinguishable from a legitimate AI agent.
 
-**Реальное событие, 31 мая 2026 г.:** Коэффициент возврата Arbitrum достиг 72,1% (в 9 раз выше нормы). Базовый секвенсор завис на 1144 мс P99. ZKSync выдал ошибку тайм-аута. Наш оракул обнаружил войну MEV за 3 минуты до резкого сбоя — достаточно времени для любого агента, чтобы сделать паузу и защитить капитал.
+**Real event, May 31, 2026:** Arbitrum's revert ratio hit 72.1% (9x above normal). The Base sequencer stalled at 1,144ms P99. zkSync threw a timeout error. Our oracle detected the MEV war 3 minutes before the acute crash — enough time for any agent to pause and protect its capital.
 
-🎬 **Демонстрационное видео (52 сек, без звука):** https://youtu.be/KtTrz23B92w
+🎬 **Demo video (52 sec, no audio):** https://youtu.be/KtTrz23B92w
 
-Никакой рекламы. Никакого закадрового голоса. Необработанная запись экрана с работающей производственной инфраструктуры.
+No marketing. No voiceover. Raw screen recording from a working production system.
 
-- [0:00–0:22] Журналы работы агента в реальном времени: сеть безопасна → arb_revert подскакивает до 16% → агент мгновенно останавливается (🚨 UNSAFE — pausing) → возобновляет работу после очистки.
-- [0:22–0:40] Casper Testnet Explorer: 962 подтвержденных `oracle.update()` транзакции. Контракт на Rust (casper-contract 5.1.1, нативный WASM — без уровня абстракции Odra).
-- [0:40–0:52] Необработанный `/api/public-feed` JSON: в реальном времени `arb_revert`, `base_p99`, `gas_pressure` — точная полезная нагрузка, за которую платят агенты DeFi через x402.
+- [0:00–0:22] Live agent logs: network safe → arb_revert spikes to 16% → agent instantly pauses (🚨 UNSAFE — pausing) → resumes after conditions clear.
+- [0:22–0:40] Casper Testnet Explorer: 962 confirmed `oracle.update()` transactions. Contract in Rust (casper-contract 5.1.1, native WASM — no Odra abstraction layer).
+- [0:40–0:52] Raw `/api/public-feed` JSON: live `arb_revert`, `base_p99`, `gas_pressure` — the exact payload DeFi agents pay for via x402.
 
 ---
 
-## Решение: Два слоя
+## Solution: Two Layers
 
-**Уровень 1 — Phoenix Zero (оракул сетевой безопасности)**
+**Layer 1 — Phoenix Zero (network safety oracle)**
 
-Производственный оракул RTT проверяет 6 секвенсоров блокчейна каждые 2 секунды. Публикует проверенное состояние безопасности в смарт-контракт тестовой сети Casper каждые 5 минут через автономного агента (при safe=true).
+A production RTT oracle checks 6 blockchain sequencers every 2 seconds. Publishes verified safety state to a Casper Testnet smart contract every 5 minutes via an autonomous agent (when safe=true).
 
-Отслеживаемые цепочки: Arbitrum One · Base · Optimism · zkSync Era · Mantle · Casper
+Chains monitored: Arbitrum One · Base · Optimism · zkSync Era · Mantle · Casper
 
-**Почему это агентная система, а не просто крон-скрипт:** агент воспринимает среду (публичный фид), держит цель (не тратить газ агента впустую), принимает решение (safe/unsafe) и действует на цепочке (`update()`) — без участия человека на каждом цикле, 24/7. Решение о безопасности — пороговая логика (интерпретируемая и проверяемая специально, а не чёрный ящик). Доступ к данным оракула отдельно фильтрует Silicon DNA (L8–L12 ниже): статистическая KL-divergence-кластеризация Sybil-паттернов — реально обучаемая на данных; итоговый 3-классовый классификатор (HUMAN/LEGIT_AGENT/MALICIOUS_BOT) — интерпретируемая пороговая логика поверх этих сигналов, не обученная ML-модель.
+**Why this is an agentic system, not just a cron script:** the agent perceives its environment (public feed), holds a goal (don't waste the agent's gas), makes a decision (safe/unsafe), and acts on-chain (`update()`) — with no human in the loop on any cycle, 24/7. The safety decision is threshold logic (deliberately interpretable and auditable, not a black box). Access to oracle data is separately gated by Silicon DNA (L8–L12 below): statistical KL-divergence clustering of Sybil patterns — genuinely trained on data; the final 3-class classifier (HUMAN/LEGIT_AGENT/MALICIOUS_BOT) is interpretable threshold logic on top of those signals, not a trained ML model.
 
-API для агентов (микроплатежи x402):
+API for agents (x402 micropayments):
 
 ```
 GET /api/v1/safe
@@ -42,73 +42,73 @@ GET /api/v1/safe
 → {"safe": true, "base_p99_ms": 82, "revert_ratio": 0.04}
 ```
 
-Стоимость 3 проверок: $0.03. Выгода: предотвращение убытков >$7 из-за некачественного газа. ROI: ~233×
+Cost of 3 checks: $0.03. Benefit: prevents >$7 in losses from bad-gas transactions. ROI: ~233×
 
-Это не нишевый эксперимент: 14 июля 2026 x402 Foundation официально заработал — 40 организаций (Coinbase, Cloudflare, AWS, Stripe, Visa) под единым нейтральным стандартом межагентных платежей. По собственным данным Coinbase, протокол уже обработал 169M+ платежей от 590K+ плательщиков.
+This isn't a niche experiment: on July 14, 2026 the x402 Foundation officially launched — 40 organizations (Coinbase, Cloudflare, AWS, Stripe, Visa) under one neutral standard for agent-to-agent payments. By Coinbase's own numbers, the protocol has already processed 169M+ payments from 590K+ payers.
 
-**Уровень 2 — Silicon DNA (ворота идентификации агента)**
+**Layer 2 — Silicon DNA (agent identity gate)**
 
-Прежде чем любой агент DeFi сможет использовать данные Phoenix Zero через x402, он должен пройти 12-уровневую проверку Silicon DNA:
+Before any DeFi agent can use Phoenix Zero's data via x402, it must pass Silicon DNA's 12-layer check:
 
-- L0: Постквантовый канал ML-KEM-768 (NIST FIPS 203)
-- L1–L7: Физика дрожания ЦП, корреляция Спирмена, Argon2id PoW, энтропийное уплотнение
-- L8–L12: KL-divergence кластеризация Sybil, пороговый 3-классовый классификатор агентов (интерпретируемая логика, не обученная ML-модель), HMAC-based commit-reveal доказательство ("ZK-lite" — не настоящий zero-knowledge, все биты слоёв видны в открытом виде)
+- L0: ML-KEM-768 post-quantum channel (NIST FIPS 203)
+- L1–L7: CPU jitter physics, Spearman correlation, Argon2id PoW, entropy compaction
+- L8–L12: KL-divergence Sybil clustering, threshold-based 3-class agent classifier (interpretable logic, not a trained ML model), HMAC-based commit-reveal proof ("ZK-lite" — not true zero-knowledge, all layer bits are visible in plaintext)
 
-Результат: HUMAN / LEGIT_AGENT → получает данные Oracle. MALICIOUS_BOT → удален на уровне L0.
+Result: HUMAN / LEGIT_AGENT → gets Oracle data. MALICIOUS_BOT → dropped at L0.
 
-Silicon DNA — шлюз предварительной проверки L0 для машинной экономики Casper: прежде чем любая машина совершит транзакцию, она должна доказать свою легитимность.
+Silicon DNA is the L0 pre-screening gateway for Casper's machine economy: before any machine can transact, it must prove its legitimacy.
 
 ---
 
-## Смарт-контракт Casper (работает в тестовой сети)
+## Casper Smart Contract (live on testnet)
 
-**Активный контракт (принимает `update()` прямо сейчас, каждые 5 минут):**
+**Active contract (accepting `update()` right now, every 5 minutes):**
 ```
 hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a
 ```
-Развёрнут 16 июля 2026 — после апгрейда протокола Casper до 2.2.2 старый контракт перестал принимать вызовы (`EntryPointType::Caller` в 2.x резолвит именованные ключи в контексте вызывающего аккаунта, а не самого контракта). Пересобран с `EntryPointType::Called` и дополнительной проверкой вызывающего в `update()`.
+Deployed July 16, 2026 — after Casper's protocol upgrade to 2.2.2, the old contract stopped accepting calls (`EntryPointType::Caller` in 2.x resolves named keys in the calling account's context, not the contract's own). Rebuilt with `EntryPointType::Called` plus an added caller check in `update()`.
 
-Контракт написан на чистом `casper-contract` 5.1.1 (Rust/WASM), без фреймворка Odra. Это осознанный выбор, не пробел: для однофункционального оракула (3 точки входа, простое хранилище состояния) прямой WASM даёт полный контроль над storage layout и entry-point семантикой — именно это позволило быстро диагностировать и исправить баг с `EntryPointType` выше. Odra рассматривается для будущих, более сложных контрактов (см. долгосрочные планы).
+The contract is written in plain `casper-contract` 5.1.1 (Rust/WASM), with no Odra framework. This is a deliberate choice, not a gap: for a single-purpose oracle (3 entry points, simple state storage), raw WASM gives full control over storage layout and entry-point semantics — which is exactly what made it possible to quickly diagnose and fix the `EntryPointType` bug above. Odra is being considered for future, more complex contracts (see long-term plans).
 
-**Оригинальный контракт (историческое доказательство, 962 реальные транзакции):**
+**Original contract (historical proof, 962 real transactions):**
 ```
 hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d
 ```
-Развёрнут 4 июня 2026 года, проработал до 6 июля 2026.
+Deployed June 4, 2026, ran until July 6, 2026.
 
-Точки входа:
-- `update(safe, arb_p99_ms, arb_revert_bps, base_p99_ms, base_revert_bps, timestamp)` — агент отправляет состояние Oracle каждые 5 минут (при safe=true)
-- `is_safe() → bool` — любой агент Casper DeFi проверяет перед транзакцией
-- `get_state() → JSON` — полный снимок Oracle
+Entry points:
+- `update(safe, arb_p99_ms, arb_revert_bps, base_p99_ms, base_revert_bps, timestamp)` — agent submits Oracle state every 5 minutes (when safe=true)
+- `is_safe() → bool` — any Casper DeFi agent checks this before transacting
+- `get_state() → JSON` — full Oracle snapshot
 
-3 июня – 6 июля 2026 (оригинальный контракт): **962 транзакции** (проверяемо в проводнике) · **3254 автономных решений по безопасности** (⚠️ исторический подсчёт по логам того периода; в текущем `agent.js` нет отдельного счётчика для этой метрики, повторно вывести число из текущей системы нельзя)
+June 3 – July 6, 2026 (original contract): **962 transactions** (verifiable on the explorer) · **3,254 autonomous safety decisions** (⚠️ historical count from that period's logs; the current `agent.js` has no separate counter for this metric, so it can't be re-derived from the current system)
 
-**Примеры транзакций тестовой сети:**
+**Sample testnet transactions:**
 
-| TX Hash | Описание |
+| TX Hash | Description |
 |---------|----------|
-| `2578359cc8ffcdac8316d6002d3aabed26888c102c8d69a2ccd3239f3fcd3326` | Deploy контракта (4 июня 2026) |
-| `4774fdbc61b42e683024a059be624279a2b06a13a654bcebfe1065492b7652f1` | Первый вызов update() от агента |
-| `d841a0c19cd29cfead1f6d834c13ec1325f6ccf7c9030a91a9595ec4aca47a7a` | Ручной тест транзакции |
+| `2578359cc8ffcdac8316d6002d3aabed26888c102c8d69a2ccd3239f3fcd3326` | Contract deploy (June 4, 2026) |
+| `4774fdbc61b42e683024a059be624279a2b06a13a654bcebfe1065492b7652f1` | First update() call from the agent |
+| `d841a0c19cd29cfead1f6d834c13ec1325f6ccf7c9030a91a9595ec4aca47a7a` | Manual test transaction |
 
-Все транзакции: https://testnet.cspr.live/account/0202494268f650725fb759e6b89bde9a44300a89a02b7d72477eff8894c857c5defb
+All transactions: https://testnet.cspr.live/account/0202494268f650725fb759e6b89bde9a44300a89a02b7d72477eff8894c857c5defb
 
 ---
 
-## Согласование с Casper Manifest (май 2026) — 6 из 9 инициатив
+## Casper Manifest Alignment (May 2026) — 6 of 9 initiatives
 
-| Инициатива | Наша реализация |
+| Initiative | Our Implementation |
 |---|---|
-| #1 Совместимость с EVM | Мониторинг 5 цепочек EVM (Arb, Base, OP, ZK, Mantle) |
-| #4 Smart Accounts для агентов | Дневной лимит трат на x402-платежи (`ts-agent/spending-limit.js`) — агент не может потратить больше заданного лимита в день ни на одном из платёжных рельсов, лимит проверяется до попытки платежа |
-| #5 Compliant Security Tokens | Обнаружение Sybil + предварительная проверка ERC-8004 L0 |
-| #6 Конфиденциальность транзакций | Доказательство ZK-lite (HMAC-SHA256) |
-| #8 Микроплатежи X402 | `/api/v1/safe` — $0.01/вызов, сейчас через Base mainnet, миграция на нативный Casper x402 Facilitator запланирована |
-| #9 Квантово-безопасная крипто | ML-KEM-768 NIST FIPS 203 в каждом рукопожатии агента |
+| #1 EVM Compatibility | Monitoring 5 EVM chains (Arb, Base, OP, ZK, Mantle) |
+| #4 Smart Accounts for Agents | Daily spending cap on x402 payments (`ts-agent/spending-limit.js`) — the agent can't spend more than a set limit per day on any payment rail, checked before a payment is attempted |
+| #5 Compliant Security Tokens | Sybil detection + ERC-8004 L0 pre-screening |
+| #6 Transaction Privacy | ZK-lite proof (HMAC-SHA256) |
+| #8 X402 Micropayments | `/api/v1/safe` — $0.01/call, currently via Base mainnet, migration to the native Casper x402 Facilitator planned |
+| #9 Quantum-Safe Cryptography | ML-KEM-768 NIST FIPS 203 on every agent handshake |
 
 ---
 
-## Как это работает
+## How It Works
 
 ```
 Phoenix Zero (DO NYC1, live since March 2026)
@@ -125,66 +125,66 @@ Any Casper DeFi Agent:
 
 ---
 
-## Технический стек
+## Technical Stack
 
-- **Смарт-контракт:** Casper 2.0 (casper-contract 5.1.1, Rust/WASM — нативный, без абстракции Odra)
-- **Агент:** Автономный агент Node.js, вызывает `update()` каждые 5 минут (при safe=true)
-- **Бэкенд Oracle:** Python 3.10, FastAPI, WebSocket-транслятор
-- **Идентификационный слой:** Silicon DNA v5.0 — 12-слойное обнаружение, ML-KEM-768 PQC
-- **Платежи:** протокол x402, сейчас через Base mainnet. Casper x402 Facilitator запущен нативно 4 июня 2026 (поддерживает testnet, `x402-facilitator.cspr.cloud`) — миграция на него запланирована, требует access token от CSPR.cloud
-- **Тесты:** 280/280 Silicon DNA · 21/21 agent tests — 100%
+- **Smart contract:** Casper 2.0 (casper-contract 5.1.1, Rust/WASM — native, no Odra abstraction)
+- **Agent:** Autonomous Node.js agent, calls `update()` every 5 minutes (when safe=true)
+- **Oracle backend:** Python 3.10, FastAPI, WebSocket broadcaster
+- **Identity layer:** Silicon DNA v5.0 — 12-layer detection, ML-KEM-768 PQC
+- **Payments:** x402 protocol, currently via Base mainnet. Casper's x402 Facilitator launched natively on June 4, 2026 (supports testnet, `x402-facilitator.cspr.cloud`) — migration planned, requires a CSPR.cloud access token
+- **Tests:** 280/280 Silicon DNA · 21/21 agent tests — 100%
 
 ---
 
-## Производственное доказательство
+## Production Proof
 
-- **Действует с:** 15 марта 2026 г.
-- **Данные:** 206,000+ измерений RTT
-- **On-chain (оригинальный контракт, 3 июня – 6 июля):** 962 подтвержденных обновления (проверяемо) · 3254 автономных блока безопасности (⚠️ исторический подсчёт, не переисчисляем из текущей системы)
-- **On-chain (активный контракт, с 16 июля):** живые обновления каждые 5 минут — см. explorer выше
+- **Live since:** March 15, 2026
+- **Data:** 206,000+ RTT measurements
+- **On-chain (original contract, June 3 – July 6):** 962 confirmed updates (verifiable) · 3,254 autonomous safety blocks (⚠️ historical count, not re-derived from the current system)
+- **On-chain (active contract, since July 16):** live updates every 5 minutes — see explorer above
 - **Casper dashboard:** https://rtt.phoenix-ai.work/casper
-- **Главная панель:** https://phoenix-zero.vercel.app
-- **Публичная лента:** https://rtt.phoenix-ai.work/api/public-feed
+- **Main dashboard:** https://phoenix-zero.vercel.app
+- **Public feed:** https://rtt.phoenix-ai.work/api/public-feed
 - **GitHub:** https://github.com/kant19801201behax5/silicon-dna-release
 
 ---
 
-## Долгосрочные планы запуска
+## Long-Term Launch Plans
 
-**Уже в работе, не гипотеза:**
-- Оракул для 6 сетей работает в продакшене с марта 2026 — это не хакатон-прототип, а действующая инфраструктура, которую хакатон расширил на Casper
-- Найден и подтверждён рабочим API-ключ CSPR.cloud (проверен напрямую против facilitator), есть готовый клиентский модуль нативных платежей Casper x402 — ни то ни другое пока не подключено к продакшену осознанно, чтобы не рисковать работающим платёжным сервисом. Следующий конкретный шаг после буидатона: подключить на стороне сервера, который принимает платежи за `/api/v1/safe`
-- Поддерживаем прямой контакт с командой Casper (TG-группа разработчиков) — уже получали и оперативно решали два независимых сообщения о проблемах с квалификационной заявкой
-- Тот же оракул уже переиспользован за пределами этого хакатона: [phoenix-tenderly-circuit-breaker](https://github.com/kant19801201behax5/phoenix-tenderly-circuit-breaker) — публичный, отдельный проект, Tenderly Web3 Action, который автоматически ставит любой `Pausable`-контракт (Base, Arbitrum, Optimism, zkSync) на паузу за 27 секунд до перегрузки сети, используя тот же сигнал `/api/v1/safe`. Это не гипотетический план, а уже написанный и опубликованный код
+**Already in motion, not a hypothesis:**
+- The 6-chain oracle has run in production since March 2026 — this isn't a hackathon prototype, it's live infrastructure that the hackathon extended onto Casper
+- A working CSPR.cloud API key has been found and confirmed (tested directly against the facilitator), and a client module for native Casper x402 payments is ready — neither is wired into production yet, deliberately, to avoid risking a working payment service. The next concrete step after the buildathon: wire it in on the server side that accepts payment for `/api/v1/safe`
+- We maintain direct contact with the Casper team (developer TG group) — have already received and promptly resolved two independent messages about issues with the qualification-round submission
+- The same oracle has already been reused outside this hackathon: [phoenix-tenderly-circuit-breaker](https://github.com/kant19801201behax5/phoenix-tenderly-circuit-breaker) — a public, separate project, a Tenderly Web3 Action that automatically pauses any `Pausable` contract (Base, Arbitrum, Optimism, zkSync) 27 seconds before network overload, using the same `/api/v1/safe` signal. This isn't a hypothetical plan — it's already-written, published code
 
-**Следующие 1–3 месяца:**
-- Миграция платежей `/api/v1/safe` с Base mainnet на нативный Casper x402 (Manifest-инициатива №8)
-- Расширение набора цепочек-секвенсоров сверх текущих 6, по мере запроса от DeFi-агентов на Casper
-- Рассмотрение Odra для новых, более сложных контрактов (текущий оракул сознательно остаётся на чистом WASM — см. выше)
+**Next 1–3 months:**
+- Migrate `/api/v1/safe` payments from Base mainnet to native Casper x402 (Manifest initiative #8)
+- Expand the set of monitored sequencer chains beyond the current 6, as Casper DeFi agents request it
+- Consider Odra for new, more complex contracts (the current oracle deliberately stays on plain WASM — see above)
 
-**Дальше:** оракул задуман как переиспользуемая инфраструктура — не только для нашего собственного агента, а как публичный сервис безопасности для любого агента на Casper, готового платить $0.01 за проверку перед транзакцией.
+**Beyond that:** the oracle is designed as reusable infrastructure — not just for our own agent, but as a public safety service for any agent on Casper willing to pay $0.01 for a pre-transaction check.
 
 ---
 
-## Как протестировать (пошагово)
+## How to Test (step by step)
 
-**1. Проверить активный контракт на Casper Testnet Explorer:**
+**1. Verify the active contract on Casper Testnet Explorer:**
 https://testnet.cspr.live/contract/hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a
 
-Видно: entry points `update`, `is_safe`, `get_state`
+You'll see entry points: `update`, `is_safe`, `get_state`
 
-**2. Проверить транзакции агента (оба контракта, тот же кошелёк):**
+**2. Verify the agent's transactions (both contracts, same wallet):**
 https://testnet.cspr.live/account/0202494268f650725fb759e6b89bde9a44300a89a02b7d72477eff8894c857c5defb
 
-**3. Читать живые данные (без авторизации):**
+**3. Read live data (no auth required):**
 ```bash
 curl https://rtt.phoenix-ai.work/api/public-feed
 ```
 
-**4. Casper dashboard (обновляется каждые 30с):**
+**4. Casper dashboard (updates every 30s):**
 https://rtt.phoenix-ai.work/casper
 
-**5. Запустить тесты:**
+**5. Run the tests:**
 ```bash
 git clone https://github.com/kant19801201behax5/silicon-dna-release
 cd silicon-dna-release/casper-agent/ts-agent
@@ -192,4 +192,4 @@ npm install && npm test
 # Expected: 21 passing
 ```
 
-Полное руководство: [TESTING_GUIDE.md](./TESTING_GUIDE.md)
+Full guide: [TESTING_GUIDE.md](./TESTING_GUIDE.md)
