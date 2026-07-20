@@ -27,8 +27,8 @@ async function callContractUpdate(oracleState) {
   // Use contract hash directly (not named key — agent doesn't own the contract)
   const contractHashHex = CONTRACT.replace('hash-', '');
   const contractHashBytes = Uint8Array.from(Buffer.from(contractHashHex, 'hex'));
-  const session = DeployUtil.ExecutableDeployItem.newStoredContractByHash(
-    contractHashBytes, 'update', args
+  const session = DeployUtil.ExecutableDeployItem.newStoredVersionContractByHash(
+    contractHashBytes, null, 'update', args
   );
 
   const payment = DeployUtil.standardPayment(2500000000); // 2.5 CSPR

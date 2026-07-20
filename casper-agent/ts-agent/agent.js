@@ -20,7 +20,7 @@ const { DeployUtil, Keys } = require('casper-js-sdk');
 const { SpendingLimiter } = require('./spending-limit');
 const fs = require('fs');
 
-const NODE_URL     = process.env.CASPER_NODE_URL   || 'https://rpc.testnet.casperlabs.io';
+const NODE_URL     = process.env.CASPER_NODE_URL   || 'https://node.testnet.casper.network/rpc';
 const CHAIN_NAME   = process.env.CASPER_CHAIN_NAME || 'casper-test';
 const KEY_PATH     = process.env.CASPER_SECRET_KEY_PATH || './keys/secret_key.pem';
 const X402_URL     = 'https://rtt.phoenix-ai.work/api/v1/safe';

@@ -8,7 +8,7 @@
 | Blockchain transactions generated | ✅ DONE | 962 confirmed update() calls (June 3 – July 6) on original contract, live updates resumed July 16 on redeployed contract |
 | Open source GitHub repo | ✅ DONE | https://github.com/kant19801201behax5/silicon-dna-release |
 | README with documentation | ✅ DONE | README.md complete with architecture + setup |
-| Demo video | ✅ DONE | https://youtu.be/o-CQfiSfQ4o |
+| Demo video | ✅ DONE | https://youtu.be/o-CQfiSfQ4o (general Phoenix Zero walkthrough) — Casper-specific 52s clip: https://youtu.be/KtTrz23B92w |
 
 ## Live Proof
 
@@ -23,7 +23,8 @@
 | Explorer | https://testnet.cspr.live |
 | Dashboard | https://phoenix-zero.vercel.app |
 | Public feed | https://rtt.phoenix-ai.work/api/public-feed |
-| Demo video | https://youtu.be/o-CQfiSfQ4o |
+| Demo video (general) | https://youtu.be/o-CQfiSfQ4o |
+| Demo video (Casper-specific, 52s) | https://youtu.be/KtTrz23B92w |
 | GitHub | https://github.com/kant19801201behax5/silicon-dna-release |
 
 ## Privacy Check — Nothing Private Leaks
@@ -37,14 +38,22 @@
 | Signal format with causal.r2 | ✅ REMOVED — uses public API only |
 | SIGNAL_TOKEN | ✅ REMOVED — public feed needs no auth |
 
-## Casper Manifest Alignment
+## Casper Manifest Alignment (6 of 9 initiatives — see [DORAHACKS_UPDATE.md](./DORAHACKS_UPDATE.md) for the canonical table)
 
 | Initiative | Our Implementation |
 |---|---|
+| #1 EVM Compatibility | Monitoring 5 EVM chains (Arbitrum, Base, Optimism, zkSync, Mantle) |
+| #4 Smart Accounts for Agents | Daily x402 spending cap (`ts-agent/spending-limit.js`) — checked before every payment attempt, not after |
+| #5 Compliant Security Tokens | Silicon DNA Sybil detection + ERC-8004 L0 gate |
+| #6 Transaction Privacy | ZK-lite proof (HMAC-SHA256) — not true zero-knowledge, disclosed as such |
 | #8 X402 Micropayments | Phoenix Zero /api/v1/safe — $0.01/call via x402 |
 | #9 Quantum-Safe Cryptography | ML-KEM-768 (NIST FIPS 203) in Silicon DNA L0 |
-| #5 Compliant Security Tokens | Silicon DNA Sybil detection + ERC-8004 L0 gate |
-| #3 Smart Accounts for Agents | LEGIT_AGENT vs MALICIOUS_BOT 3-class classifier |
+
+Note: an earlier version of this table numbered "Smart Accounts for Agents" as
+#3 and described it as the LEGIT_AGENT/MALICIOUS_BOT classifier. That was
+inconsistent with the actual Casper Manifest (which lists Smart Accounts as
+#4) and pointed at the wrong component — the classifier is threshold logic,
+not a spend-limit guardrail. Fixed above to match DORAHACKS_UPDATE.md.
 
 ## Architecture
 
@@ -71,3 +80,5 @@ and does not itself touch the chain. The real on-chain agent is
 | Mantle pusher wallet unfunded | ⚠️ Dead since 2026-07-08 (out of testnet gas). Contract itself confirmed live on-chain. Mantle Turing Test Hackathon's own schedule shows winners were to be announced 2026-07-10 — refueling now most likely doesn't affect that hackathon's outcome, but the pusher should still be revived since it feeds the same shared oracle. |
 | Possible past "Allora" connection | ⚠️ User recalled this x402 gateway may have originally been built for/discussed with a specific external party (possibly related to Allora Network) who never followed up after an agreement. No record of this found in memory or this repo — needs the user's own recollection (name, chat log, anything concrete) before it can be investigated further. |
 | Casper Final Round registration | ✅ DONE (2026-07-18) — registered, submitted the current/corrected BUIDL text (not the stale qualification-round version) to the finals page. Awaiting results. |
+| `oracle-contract/Cargo.toml` build from a fresh clone | ⚠️ Has a `[patch.crates-io]` pointing at an absolute path on the production server (`/opt/casper-oracle/casper-contract-patched`), not included in this repo. `cargo build` on a clean checkout will fail on that line. `casper-contract 5.1.1` is published normally on crates.io, so removing the patch block should work, but that hasn't been verified end-to-end. Verify against the deployed, on-chain contract instead of rebuilding until this is fixed. |
+| `ts-agent/call_contract.js`, `ts-agent/deploy_contract.js`, `ts-agent/agent.js`, `ts-agent/.env.example` | ✅ Deeper pass (2026-07-21) found these had drifted from what's actually running in production: `call_contract.js` used an outdated SDK call (`newStoredContractByHash` instead of the `newStoredVersionContractByHash` the live entity-model contract actually needs — same class of bug as the sdk-typescript issue above), `deploy_contract.js` pointed at a paid CSPR.cloud RPC needing an API key nobody cloning this repo would have, and `.env.example` set `DRY_RUN=false` and a dead RPC URL, contradicting TESTING_GUIDE.md's "safe to run without a funded key" instructions. All four synced to match the real, working production code. |

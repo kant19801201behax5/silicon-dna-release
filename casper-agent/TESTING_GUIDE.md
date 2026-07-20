@@ -153,4 +153,5 @@ During the **May 31, 2026 MEV war**: `arb_revert_ratio` reached `0.721` → `saf
 | Agent wallet | testnet.cspr.live/account/020249... |
 | Live data | rtt.phoenix-ai.work/api/public-feed |
 | Dashboard | rtt.phoenix-ai.work/casper |
-| Demo video | https://youtu.be/o-CQfiSfQ4o |
+| Demo video (general) | https://youtu.be/o-CQfiSfQ4o |
+| Demo video (Casper-specific, 52s) | https://youtu.be/KtTrz23B92w |

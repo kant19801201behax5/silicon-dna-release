@@ -4,11 +4,10 @@ const fs = require('fs');
 const fetch = require('node-fetch');
 const { DeployUtil, Keys, RuntimeArgs } = require('casper-js-sdk');
 
-const NODE_URL   = 'https://node.testnet.cspr.cloud/rpc';
+const NODE_URL   = 'https://node.testnet.casper.network/rpc';
 const CHAIN_NAME = process.env.CASPER_CHAIN_NAME || 'casper-test';
 const KEY_PATH   = process.env.CASPER_SECRET_KEY_PATH || './keys/secret_key.pem';
 const WASM_PATH  = '/opt/casper-oracle/oracle-contract/target/wasm32-unknown-unknown/release/sequencer_oracle.wasm';
-const API_KEY    = process.env.CSPR_CLOUD_KEY;
 
 async function deploy() {
   console.log('Deploying SequencerOracle to Casper Testnet...');
@@ -33,7 +32,7 @@ async function deploy() {
 
   const resp = await fetch(NODE_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': API_KEY },
+    headers: { 'Content-Type': 'application/json' },
     body, timeout: 30000
   });
 

@@ -99,7 +99,8 @@ Currently settled on Base mainnet. Casper's own x402 Facilitator (`x402-facilita
 
 - Dashboard: https://phoenix-zero.vercel.app
 - Public feed: https://rtt.phoenix-ai.work/api/public-feed
-- Demo video: https://youtu.be/o-CQfiSfQ4o
+- Demo video: https://youtu.be/o-CQfiSfQ4o (general Phoenix Zero walkthrough)
+- Demo video (Casper-specific, 52s, unnarrated screen capture): https://youtu.be/KtTrz23B92w
 - DoraHacks: https://dorahacks.io/buidl/43859
 
 ---
@@ -140,6 +141,16 @@ RUSTFLAGS="-C link-arg=--import-undefined -C target-cpu=mvp" \
 # 4. Deploy (see ts-agent/deploy_contract.js) and copy the resulting
 #    contract hash into ts-agent/.env as CONTRACT_HASH
 ```
+
+⚠️ **Known build gap:** `Cargo.toml` currently has `[patch.crates-io] casper-contract
+= { path = "/opt/casper-oracle/casper-contract-patched" }` — an absolute path on
+the production server, not included in this repo. A fresh `cargo build` from a
+clean clone will fail on this line as-is. `casper-contract 5.1.1` is published
+normally on crates.io, so removing that `[patch.crates-io]` block should let a
+fresh clone build, but this hasn't been verified end-to-end against a clean
+checkout. Until it is, treat the deployed, on-chain contract (hash below, live
+and independently verifiable via the testnet explorer) as the source of truth
+rather than rebuilding from source.
 
 ### Run the Agent
 
