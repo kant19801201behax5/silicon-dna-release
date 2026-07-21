@@ -1,3 +1,13 @@
+# ⚠️ SUPERSEDED — do not use. Kept only for history, per this repo's
+# never-delete policy. This script builds via `cargo odra build`, but the
+# actually-deployed contract is raw casper-contract 5.1.1 with NO Odra
+# (see README.md's "Deploy Contract to Casper Testnet" section for the
+# real, current build command — cargo +nightly build -Z build-std, no
+# Odra). This script also targets the Python pusher/casper-oracle-pusher
+# path, which was never deployed — see README.md's "Components" section:
+# the real, deployed agent is ts-agent/agent.js (Node.js). Left as-is
+# rather than deleted or silently rewritten.
+#
 # Phoenix Zero — Build Casper WASM contract locally (Windows PowerShell)
 # Run this BEFORE deploying to server
 # Requires: Rust installed (https://rustup.rs)

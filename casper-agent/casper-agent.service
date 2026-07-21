@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=phoenix
+User=root
 WorkingDirectory=/opt/casper-agent
 EnvironmentFile=/opt/casper-agent/.env
 ExecStart=/usr/bin/node /opt/casper-agent/agent.js

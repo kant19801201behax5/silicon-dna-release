@@ -1,4 +1,14 @@
 #!/bin/bash
+# ⚠️ SUPERSEDED — do not use. Kept only for history, per this repo's
+# never-delete policy. Deploys the Python pusher (pusher/casper_oracle_pusher.py)
+# as casper-oracle-pusher.service — that service was never actually
+# installed on the production server and the Python pusher is not the
+# deployed agent (see README.md's "Components" section — the real,
+# deployed agent is ts-agent/agent.js). Also points at
+# rpc.testnet.casperlabs.io, a dead RPC URL (see ts-agent/.env.example's
+# comment on this). For the current, real deploy process see README.md's
+# "Setup" section.
+#
 # Phoenix Zero — Casper Testnet Deploy Script
 # ============================================
 # Strategy: WASM built locally (memory-intensive Rust compilation)
