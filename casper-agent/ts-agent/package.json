@@ -12,7 +12,7 @@
     "@coinbase/x402": "^2.1.0",
     "casper-js-sdk": "^3.0.0-rc05",
     "dotenv": "^16.4.5",
-    "node-fetch": "^2.7.0"
+    "node-fetch": "^3.3.2"
   },
   "overrides": {
     "ws": "^8.21.0",
