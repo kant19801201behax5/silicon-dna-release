@@ -131,17 +131,27 @@ All transactions: https://testnet.cspr.live/account/0202494268f650725fb759e6b89b
 | #8 X402 Micropayments | `/api/v1/safe` — $0.01/call, currently via Base mainnet, migration to the native Casper x402 Facilitator planned |
 | #9 Quantum-Safe Cryptography | ML-KEM-768 NIST FIPS 203 on every agent handshake |
 
-**Why this matters right now:** on July 15, 2026, Casper announced it's
-preparing for CSPR availability on Kraken — part of a stated push toward
-real-world assets, tokenization, and institutional-grade infrastructure
-(Casper's own May 2026 multi-year roadmap makes the same point). That's
-also literally the buildathon's own stated focus: "Agentic AI... with
-special emphasis on DeFi and/or real-world assets (RWA)." We built for
-DeFi first; the MCP server now also exposes an explicit RWA-framed tool
-(`get_rwa_settlement_signal` — combines network safety with identity
-screening, the two things an RWA settlement decision actually needs) so
-the same verified infrastructure serves both use cases honestly, without
-inventing a separate RWA product we haven't built.
+**Why this matters right now:** on **July 21, 2026, CSPR went live for
+trading on Kraken** (Kraken signalled preparation on July 15) — a major
+U.S.-access milestone and part of Casper's stated push toward real-world
+assets, tokenization, and institutional-grade infrastructure (its May 2026
+multi-year roadmap makes the same point). Casper has also **joined ERC-7943
+and previously contributed to ERC-3643** — the emerging standards for
+tokenized RWAs and for permissioned, compliance-gated token issuance. Both
+are fundamentally about *who is eligible to hold or receive a token* — i.e.
+counterparty identity screening — which is exactly what Silicon DNA's L8–L12
+gate already does (KL-divergence Sybil clustering + a HUMAN / LEGIT_AGENT /
+MALICIOUS_BOT classifier). We do **not** implement those token standards and
+don't claim to; the point is narrower and honest: regulated RWA settlement on
+Casper needs both a network-safety check *and* an identity/eligibility check,
+and both already exist here and are tested. That's also literally the
+buildathon's own stated focus: "Agentic AI... with special emphasis on DeFi
+and/or real-world assets (RWA)." We built for DeFi first; the MCP server now
+also exposes an explicit RWA-framed tool (`get_rwa_settlement_signal` —
+combines network safety with identity screening, the two things an RWA
+settlement decision actually needs) so the same verified infrastructure serves
+both use cases honestly, without inventing a separate RWA product we haven't
+built.
 
 ---
 
