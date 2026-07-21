@@ -1,3 +1,18 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# NOTE — READ BEFORE `pip install`  (see README.md in this folder)
+#
+# This Python pusher is a REFERENCE / alternative implementation.
+# The agent that actually runs in production is the Node.js one in
+# ../ts-agent/  — that is the fully runnable path (npm install && npm test).
+#
+# `pip install -r requirements.txt` requires a Rust toolchain on modern
+# Python: pycspr 1.2.0 (its latest release) pins blake3<0.5.0, and the only
+# blake3 in that range (0.4.1) ships as a source sdist that must be compiled
+# from Rust — there is no prebuilt wheel for Python 3.12+. Without Rust the
+# install fails at `metadata-generation-failed` on blake3. This is an upstream
+# pycspr constraint, not a bug in this code (the scripts themselves compile
+# cleanly). Use the ts-agent for a zero-toolchain runnable path.
+# ─────────────────────────────────────────────────────────────────────────────
 pycspr==1.2.0
 requests>=2.33.0
 python-dotenv>=1.2.2
