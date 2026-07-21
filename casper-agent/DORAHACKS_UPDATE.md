@@ -46,6 +46,19 @@ Cost of 3 checks: $0.03. Benefit: prevents >$7 in losses from bad-gas transactio
 
 This isn't a niche experiment: on July 14, 2026 the x402 Foundation officially launched — 40 organizations (Coinbase, Cloudflare, AWS, Stripe, Visa) under one neutral standard for agent-to-agent payments. By Coinbase's own numbers, the protocol has already processed 169M+ payments from 590K+ payers.
 
+**The x402 negotiation itself is a second, smaller agentic loop, separate from
+the safe/unsafe decision above:** on every cycle the agent probes the paid
+endpoint first (`probeX402()` in `ts-agent/agent.js`), *perceives* the 402
+payment challenge, decodes the x402 payload (price, network, recipient),
+checks its own autonomous daily-spend constraint (`SpendingLimiter` —
+`ts-agent/spending-limit.js`, Casper Manifest initiative #4), and *decides*:
+pay and get priority data, or decline and fall back to the free public feed —
+all without a human approving any individual payment. Today the agent has no
+funded Base wallet, so it always takes the fallback branch — that decision
+path is real and exercised every 5 minutes (see the `[X402]` log lines in
+the demo video), but the actual-payment branch itself is coded and tested,
+not yet exercised in production.
+
 **Layer 2 — Silicon DNA (agent identity gate)**
 
 Silicon DNA is a separate, full-time 12-layer bot-detection system that runs against
@@ -144,6 +157,7 @@ Any Casper DeFi Agent:
 - **Oracle backend:** Python 3.10, FastAPI, WebSocket broadcaster
 - **Identity layer:** Silicon DNA v5.0 — 12-layer detection, ML-KEM-768 PQC
 - **Payments:** x402 protocol, currently via Base mainnet. Casper's x402 Facilitator launched natively on June 4, 2026 (supports testnet, `x402-facilitator.cspr.cloud`) — migration planned, requires a CSPR.cloud access token
+- **MCP:** a Model Context Protocol server (`casper-agent/mcp-server/`) exposes the same safety data as MCP tools for any MCP-compatible agent — part of Casper's own promoted AI toolkit
 - **Tests:** 280/280 Silicon DNA · 21/21 agent tests — 100%
 
 ---

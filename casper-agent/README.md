@@ -78,6 +78,22 @@ npm start
 
 A Python implementation (`pusher/casper_oracle_pusher.py`) also exists in this repo with equivalent logic, but it is not the one deployed — the Node.js agent above is.
 
+### 3. MCP Server (`mcp-server/`)
+
+Exposes the same live safety data as [Model Context Protocol](https://modelcontextprotocol.io)
+tools (`get_sequencer_safety`, `get_oracle_state`) — part of the AI toolkit
+Casper itself promotes (https://www.casper.network/ai). Lets any MCP-compatible
+agent (Claude Desktop, etc.) query network safety without touching this
+project's REST API directly.
+
+```bash
+cd mcp-server
+npm install
+node index.js
+```
+
+See [mcp-server/README.md](./mcp-server/README.md) for the Claude Desktop config and what was verified.
+
 ---
 
 ## x402 Integration

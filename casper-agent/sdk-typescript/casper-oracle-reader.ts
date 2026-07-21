@@ -9,23 +9,37 @@
  * Usage:
  *   import { SequencerOracleClient } from './casper-oracle-reader';
  *
- *   const oracle = new SequencerOracleClient(CONTRACT_HASH);
+ *   const oracle = new SequencerOracleClient(CONTRACT_HASH); // package hash
  *   const safe = await oracle.isSafe();
  *   if (safe) { await submitTransaction(); }
  *
- * STATUS (2026-07-18): INCOMPLETE — do not present as working yet.
- * Verified two real bugs and fixed them: a CJS/ESM import crash, and a dead
- * default RPC URL (rpc.testnet.casperlabs.io no longer resolves — casper-js-sdk
- * v2.15.4 predates the current node.testnet.casper.network naming). After
- * both fixes, getState() still fails with 'value was not found in the global
- * state' against the real deployed contract. Root cause is very likely the
- * same one that broke the original oracle contract earlier in this project:
- * casper-js-sdk v2.15.4's getBlockState() predates Casper's entity-model
- * addressing (protocol 2.x) and queries state the old way. This SDK was most
- * likely written earlier, before that protocol upgrade, and never revisited.
- * Fixing it properly means rewriting getState() against the current
- * entity-model query API — real work, not a quick patch. Revisit this file
- * before treating it as a deliverable.
+ * STATUS (2026-07-21): FIXED AND VERIFIED against the live deployed
+ * contract. Three real bugs were found and fixed:
+ *   1. A CJS/ESM import crash.
+ *   2. A dead default RPC URL (rpc.testnet.casperlabs.io no longer
+ *      resolves — casper-js-sdk v2.15.4 predates the current
+ *      node.testnet.casper.network naming).
+ *   3. The real blocker: casper-js-sdk v2.15.4's getBlockState() predates
+ *      Casper's entity-model addressing (protocol 2.x). Fixed by upgrading
+ *      to casper-js-sdk ^3.0.0-rc05 (the same version the production
+ *      ts-agent already uses) and reading state via query_global_state
+ *      instead. Also found that v3.0.0-rc05's own high-level helpers
+ *      (getEntity(), Contract.queryContractData()) send malformed params
+ *      against this node — worked around by calling query_global_state
+ *      directly through the client's low-level request() method.
+ *
+ * One addressing subtlety worth understanding: CONTRACT_HASH as published
+ * everywhere else in this repo (README, TESTING_GUIDE, the .env files) is
+ * the contract's *package* hash — the address `update()` deploys target via
+ * StoredVersionedContractByHash. Reading stored state, however, requires
+ * the *entity* hash (the specific deployed version under that package) —
+ * a different address. This client resolves package → entity automatically
+ * on first use and caches it, so callers only ever need the package hash
+ * they already have.
+ *
+ * Verified live: getState() against the real deployed contract returns
+ * safe/arb_p99_ms/base_p99_ms/last_update_ts matching the production
+ * agent's own logs, with staleSec tracking the real ~5-minute push cycle.
  */
 
 import { CasperServiceByJsonRPC } from "casper-js-sdk";
@@ -52,55 +66,87 @@ export interface AgentDecision {
 
 export class SequencerOracleClient {
   private client: CasperServiceByJsonRPC;
-  private contractHash: string;
+  private packageHash: string;
+  private entityHash: string | null = null;
 
   // Max acceptable data staleness (seconds)
   private maxStaleSec: number;
 
+  /**
+   * @param contractHash The contract's package hash (same value published
+   *   as CONTRACT_HASH elsewhere in this repo — e.g.
+   *   hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a).
+   */
   constructor(
     contractHash: string,
     nodeUrl = "https://node.testnet.casper.network/rpc",
-    maxStaleSec = 180
+    // Production pushes every ~300s (5 min) — default threshold set with
+    // margin above that so a normal push-cycle gap doesn't read as stale.
+    maxStaleSec = 360
   ) {
-    this.contractHash  = contractHash.replace("hash-", "");
-    this.client        = new CasperServiceByJsonRPC(nodeUrl);
-    this.maxStaleSec   = maxStaleSec;
+    this.packageHash = contractHash.replace("hash-", "");
+    this.client       = new CasperServiceByJsonRPC(nodeUrl);
+    this.maxStaleSec  = maxStaleSec;
+  }
+
+  /** Low-level query_global_state call, bypassing the SDK's own broken
+   *  getEntity()/queryContractData() helpers for this node/SDK combo. */
+  private async rawQuery(key: string, path: string[]): Promise<any> {
+    const stateRootHash = await this.client.getStateRootHash();
+    return (this.client as any).client.request({
+      method: "query_global_state",
+      params: {
+        state_identifier: { StateRootHash: stateRootHash },
+        key,
+        path,
+      },
+    });
+  }
+
+  /** Resolve this contract's package hash to its current entity (contract)
+   *  hash, once, and cache it. */
+  private async resolveEntityHash(): Promise<string> {
+    if (this.entityHash) return this.entityHash;
+    const result = await this.rawQuery(`hash-${this.packageHash}`, []);
+    const versions = result?.stored_value?.ContractPackage?.versions ?? [];
+    const latest = versions[versions.length - 1];
+    if (!latest) {
+      throw new Error(`No entity versions found for package ${this.packageHash}`);
+    }
+    this.entityHash = String(latest.contract_hash).replace("contract-", "");
+    return this.entityHash;
+  }
+
+  /** Read a single named-key value from the contract's stored state. */
+  private async readField(name: string): Promise<any> {
+    const entityHash = await this.resolveEntityHash();
+    const result = await this.rawQuery(`hash-${entityHash}`, [name]);
+    return result?.stored_value?.CLValue?.parsed;
   }
 
   /**
    * Read full oracle state from on-chain storage.
    */
   async getState(): Promise<OracleState> {
-    const stateRoot = await this.client.getStateRootHash();
-
-    const readKey = async (name: string): Promise<string> => {
-      const result = await this.client.getBlockState(
-        stateRoot,
-        `hash-${this.contractHash}`,
-        [name]
-      );
-      return (result as any).CLValue?.value?.toString() ?? "0";
-    };
-
     const [safe, arbP99, baseP99, arbRevertBps, baseRevertBps, lastTs] =
       await Promise.all([
-        readKey("safe"),
-        readKey("arb_p99_ms"),
-        readKey("base_p99_ms"),
-        readKey("arb_revert_bps"),
-        readKey("base_revert_bps"),
-        readKey("last_update_ts"),
+        this.readField("safe"),
+        this.readField("arb_p99_ms"),
+        this.readField("base_p99_ms"),
+        this.readField("arb_revert_bps"),
+        this.readField("base_revert_bps"),
+        this.readField("last_update_ts"),
       ]);
 
     const now = Math.floor(Date.now() / 1000);
-    const lastUpdateTs = parseInt(lastTs, 10) || 0;
+    const lastUpdateTs = Number(lastTs) || 0;
 
     return {
-      safe:              safe === "true",
-      arbP99Ms:          parseInt(arbP99, 10),
-      baseP99Ms:         parseInt(baseP99, 10),
-      arbRevertPercent:  parseInt(arbRevertBps, 10) / 100,
-      baseRevertPercent: parseInt(baseRevertBps, 10) / 100,
+      safe:              Boolean(safe),
+      arbP99Ms:          Number(arbP99) || 0,
+      baseP99Ms:         Number(baseP99) || 0,
+      arbRevertPercent:  (Number(arbRevertBps) || 0) / 100,
+      baseRevertPercent: (Number(baseRevertBps) || 0) / 100,
       lastUpdateTs,
       staleSec:          now - lastUpdateTs,
     };

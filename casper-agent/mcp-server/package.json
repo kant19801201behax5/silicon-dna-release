@@ -1,0 +1,18 @@
+{
+  "name": "phoenix-zero-casper-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server exposing Phoenix Zero's live sequencer-safety oracle as tools for MCP-compatible AI agents",
+  "main": "index.js",
+  "bin": {
+    "phoenix-zero-mcp": "index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
