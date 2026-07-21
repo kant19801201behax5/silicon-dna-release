@@ -126,10 +126,22 @@ All transactions: https://testnet.cspr.live/account/0202494268f650725fb759e6b89b
 |---|---|
 | #1 EVM Compatibility | Monitoring 5 EVM chains (Arb, Base, OP, ZK, Mantle) |
 | #4 Smart Accounts for Agents | Daily spending cap on x402 payments (`ts-agent/spending-limit.js`) — the agent can't spend more than a set limit per day on any payment rail, checked before a payment is attempted |
-| #5 Compliant Security Tokens | Sybil detection + ERC-8004 L0 pre-screening |
+| #5 Compliant Security Tokens | Sybil detection + ERC-8004 L0 pre-screening, now also exposed as an explicit RWA-settlement signal (see below) |
 | #6 Transaction Privacy | ZK-lite proof (HMAC-SHA256) |
 | #8 X402 Micropayments | `/api/v1/safe` — $0.01/call, currently via Base mainnet, migration to the native Casper x402 Facilitator planned |
 | #9 Quantum-Safe Cryptography | ML-KEM-768 NIST FIPS 203 on every agent handshake |
+
+**Why this matters right now:** on July 15, 2026, Casper announced it's
+preparing for CSPR availability on Kraken — part of a stated push toward
+real-world assets, tokenization, and institutional-grade infrastructure
+(Casper's own May 2026 multi-year roadmap makes the same point). That's
+also literally the buildathon's own stated focus: "Agentic AI... with
+special emphasis on DeFi and/or real-world assets (RWA)." We built for
+DeFi first; the MCP server now also exposes an explicit RWA-framed tool
+(`get_rwa_settlement_signal` — combines network safety with identity
+screening, the two things an RWA settlement decision actually needs) so
+the same verified infrastructure serves both use cases honestly, without
+inventing a separate RWA product we haven't built.
 
 ---
 
@@ -157,7 +169,7 @@ Any Casper DeFi Agent:
 - **Oracle backend:** Python 3.10, FastAPI, WebSocket broadcaster
 - **Identity layer:** Silicon DNA v5.0 — 12-layer detection, ML-KEM-768 PQC
 - **Payments:** x402 protocol, currently via Base mainnet. Casper's x402 Facilitator launched natively on June 4, 2026 (supports testnet, `x402-facilitator.cspr.cloud`) — migration planned, requires a CSPR.cloud access token
-- **MCP:** a Model Context Protocol server (`casper-agent/mcp-server/`) exposes the same safety data as MCP tools for any MCP-compatible agent — part of Casper's own promoted AI toolkit
+- **MCP:** a Model Context Protocol server (`casper-agent/mcp-server/`) exposes the same safety data as MCP tools for any MCP-compatible agent — part of Casper's own promoted AI toolkit. Includes an RWA-specific tool (`get_rwa_settlement_signal`) combining network safety with identity-screening context
 - **Tests:** 280/280 Silicon DNA · 21/21 agent tests — 100%
 
 ---
@@ -187,6 +199,7 @@ Any Casper DeFi Agent:
 - Migrate `/api/v1/safe` payments from Base mainnet to native Casper x402 (Manifest initiative #8)
 - Expand the set of monitored sequencer chains beyond the current 6, as Casper DeFi agents request it
 - Consider Odra for new, more complex contracts (the current oracle deliberately stays on plain WASM — see above)
+- Extend `get_rwa_settlement_signal` from a read-only informational tool into an actual settlement gate an RWA contract can call on-chain, following the same pattern as `is_safe()` — this is a real next step, not a claim we've already built it
 
 **Beyond that:** the oracle is designed as reusable infrastructure — not just for our own agent, but as a public safety service for any agent on Casper willing to pay $0.01 for a pre-transaction check.
 

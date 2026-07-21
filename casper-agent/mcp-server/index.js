@@ -94,6 +94,55 @@ server.registerTool(
   }
 );
 
+server.registerTool(
+  "get_rwa_settlement_signal",
+  {
+    title: "Get RWA settlement readiness signal for Casper",
+    description:
+      "Combines network safety with identity screening context for tokenized " +
+      "real-world-asset (RWA) settlement decisions on Casper — RWA transfers " +
+      "care about both (a) whether the broader chain environment is stable " +
+      "enough to settle without a failed/expensive retry, and (b) whether the " +
+      "counterparty side of the flow has passed identity screening.",
+    inputSchema: {},
+  },
+  async () => {
+    const { latest, health } = await fetchLatest();
+    const arbRevert = parseFloat(latest.arb_revert || 0);
+    const baseP99   = parseInt(latest.base_p99 || 0, 10);
+    const casperP99 = latest.casper_p99 != null ? Math.round(latest.casper_p99) : null;
+    const metricsOk = arbRevert < ARB_REVERT_MAX && baseP99 < BASE_P99_MAX;
+    const networkSafe = health.safe === true && metricsOk;
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          network_safe_to_settle: networkSafe,
+          reason: networkSafe ? "ok" : (arbRevert >= ARB_REVERT_MAX ? "high_revert" : "elevated_p99"),
+          arb_revert_pct: +(arbRevert * 100).toFixed(2),
+          base_p99_ms: baseP99,
+          // Informational only — Casper's own P99 has a different latency
+          // profile than the EVM chains above (different consensus, block
+          // time), and this project has not calibrated a safe/unsafe
+          // threshold for it specifically. Not used to gate the verdict.
+          casper_p99_ms_informational: casperP99,
+          identity_screening: {
+            available: true,
+            note:
+              "Paid access to this oracle (/api/v1/safe) is gated by Silicon DNA's " +
+              "live bot-ban list — an IP already flagged by its detection is " +
+              "rejected before payment is even requested. This tool reads the " +
+              "free public feed and does not itself perform that check; it " +
+              "only applies to the paid x402 endpoint. See casper-agent/CHECKLIST.md " +
+              "for how this was verified.",
+          },
+          ts: latest.ts,
+        }, null, 2),
+      }],
+    };
+  }
+);
+
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
