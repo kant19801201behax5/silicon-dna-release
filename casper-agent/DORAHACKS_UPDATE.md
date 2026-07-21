@@ -48,15 +48,27 @@ This isn't a niche experiment: on July 14, 2026 the x402 Foundation officially l
 
 **Layer 2 — Silicon DNA (agent identity gate)**
 
-Before any DeFi agent can use Phoenix Zero's data via x402, it must pass Silicon DNA's 12-layer check:
+Silicon DNA is a separate, full-time 12-layer bot-detection system that runs against
+browser/session traffic to this domain: L0 ML-KEM-768 post-quantum channel, L1–L7
+CPU jitter physics / Spearman correlation / Argon2id PoW / entropy compaction,
+L8–L12 KL-divergence Sybil clustering, a threshold-based 3-class agent classifier
+(interpretable logic, not a trained ML model), and an HMAC-based commit-reveal
+proof ("ZK-lite" — not true zero-knowledge, all layer bits are visible in plaintext).
 
-- L0: ML-KEM-768 post-quantum channel (NIST FIPS 203)
-- L1–L7: CPU jitter physics, Spearman correlation, Argon2id PoW, entropy compaction
-- L8–L12: KL-divergence Sybil clustering, threshold-based 3-class agent classifier (interpretable logic, not a trained ML model), HMAC-based commit-reveal proof ("ZK-lite" — not true zero-knowledge, all layer bits are visible in plaintext)
+**What actually connects it to the x402 oracle (verified live, 2026-07-21):** an IP
+that Silicon DNA's own detection has already flagged and banned is rejected with
+`403 blocked_by_silicon_dna` on `/api/v1/*` *before* it's even asked to pay — the
+payment gateway queries Silicon DNA's live ban list on every request. This is a
+real, tested gate, not a documentation claim: verified end-to-end by injecting a
+test ban on a reserved (RFC 5737, non-routable) address and confirming the paid
+endpoint rejected it, while a clean address still got the normal 402 flow.
 
-Result: HUMAN / LEGIT_AGENT → gets Oracle data. MALICIOUS_BOT → dropped at L0.
-
-Silicon DNA is the L0 pre-screening gateway for Casper's machine economy: before any machine can transact, it must prove its legitimacy.
+To be precise about scope: this is a **ban-list check**, not a full per-request
+12-layer classification — that would require every caller to complete Silicon
+DNA's own PQC/session handshake, which external x402 clients (including our own
+Casper agent) don't do. What's real is that Silicon DNA's accumulated verdict on
+an IP — from whatever traffic already triggered it — gates that IP's access to
+the paid oracle data too.
 
 ---
 
