@@ -14,6 +14,8 @@ An autonomous agent that monitors 6 blockchain sequencers in real time and publi
 **Measurements collected:** 206,000+
 **Proven:** MEV war May 31, 2026 — 72.1% revert ratio detected 3 minutes early
 
+**Market context:** CSPR went live for trading on Kraken July 21, 2026, and Casper has joined **ERC-7943** (RWA tokenization) and contributed to **ERC-3643** (permissioned, compliance-gated issuance). Regulated RWA settlement needs both a network-safety check *and* counterparty identity screening — the two signals this project already provides (network oracle + Silicon DNA identity gate). We don't implement those token standards; see [DORAHACKS_UPDATE.md](./DORAHACKS_UPDATE.md) for the honest framing.
+
 ---
 
 ## Architecture
