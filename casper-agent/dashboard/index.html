@@ -180,6 +180,24 @@
 
     .timestamp { color: #6e7681; font-size: 10px; }
 
+    /* Content classes (extracted from former inline styles) */
+    .loading-note     { color: #6e7681; font-size: 12px; }
+    .feed-note        { font-size: 10px; color: #6e7681; margin-bottom: 10px; }
+    .tx-sub           { font-size: 10px; color: #6e7681; }
+    .feed-link        { margin-top: 12px; font-size: 11px; color: #7c3aed; text-align: center; }
+    .arch-red         { color: #f85149; }
+    .ep-block         { margin-top: 16px; }
+    .ep-label         { font-size: 11px; color: #6e7681; margin-bottom: 8px; }
+    .ep-list          { font-size: 11px; color: #8b949e; line-height: 2; }
+    .ep-write         { color: #7c3aed; }
+    .ep-read          { color: #3fb950; }
+    .auth-box         { margin-top: 16px; background: #0d2c0d; border: 1px solid #238636; border-radius: 6px; padding: 10px 12px; }
+    .auth-title       { font-size: 11px; color: #3fb950; font-weight: 600; }
+    .auth-note        { font-size: 10px; color: #8b949e; margin-top: 4px; }
+    .link-row         { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .link-btn         { font-size: 10px; color: #7c3aed; background: #1f1a2e; padding: 4px 10px; border-radius: 6px; text-decoration: none; }
+    .chain-row-casper { margin-top: 4px; }
+
     @media (max-width: 720px) {
       .header { flex-direction: column; align-items: flex-start; gap: 10px; padding: 16px 20px; }
       .container { padding: 20px 14px; }
@@ -265,7 +283,7 @@
         <div class="card-badge" id="chain-updated">updating...</div>
       </div>
       <div class="card-body" id="chains">
-        <div style="color:#6e7681;font-size:12px">Loading chain data...</div>
+        <div class="loading-note">Loading chain data...</div>
       </div>
     </div>
 
@@ -276,12 +294,12 @@
         <div class="card-badge">5 min interval</div>
       </div>
       <div class="card-body" id="agent-feed">
-        <div style="font-size:10px;color:#6e7681;margin-bottom:10px">Recent confirmed update() calls (snapshot, 2026-07-18 12:26 UTC) — this list is not auto-refreshed, click through for the live account history:</div>
+        <div class="feed-note">Recent confirmed update() calls (snapshot, 2026-07-18 12:26 UTC) — this list is not auto-refreshed, click through for the live account history:</div>
         <div class="tx-item">
           <div class="tx-dot safe"></div>
           <div>
             <div class="tx-hash"><a href="https://testnet.cspr.live/deploy/2a789eea6a7bb99b7e0428946a3c8739d1e99fdbb43c466ea339bd5035fc0202" target="_blank" rel="noopener">2a789eea...0202</a></div>
-            <div style="font-size:10px;color:#6e7681">update() — arb=2.11% base_p99=8ms</div>
+            <div class="tx-sub">update() — arb=2.11% base_p99=8ms</div>
           </div>
           <div class="tx-meta">12:26 UTC</div>
         </div>
@@ -289,7 +307,7 @@
           <div class="tx-dot safe"></div>
           <div>
             <div class="tx-hash"><a href="https://testnet.cspr.live/deploy/4dc452223b55e746bc218acdbd6fb1485d7e477f0d602e38a761976dc5697cd6" target="_blank" rel="noopener">4dc45222...cd6</a></div>
-            <div style="font-size:10px;color:#6e7681">update() — arb=1.33% base_p99=12ms</div>
+            <div class="tx-sub">update() — arb=1.33% base_p99=12ms</div>
           </div>
           <div class="tx-meta">12:21 UTC</div>
         </div>
@@ -297,11 +315,11 @@
           <div class="tx-dot safe"></div>
           <div>
             <div class="tx-hash"><a href="https://testnet.cspr.live/deploy/cc769a2f063209f98a307ce9762c02b3e3eb830707cb9ffdd4f1f3edc2ee1b2c" target="_blank" rel="noopener">cc769a2f...1b2c</a></div>
-            <div style="font-size:10px;color:#6e7681">update() — arb=0.81% base_p99=7ms</div>
+            <div class="tx-sub">update() — arb=0.81% base_p99=7ms</div>
           </div>
           <div class="tx-meta">12:16 UTC</div>
         </div>
-        <div style="margin-top:12px;font-size:11px;color:#7c3aed;text-align:center">
+        <div class="feed-link">
           <a href="https://testnet.cspr.live/account/0202494268f650725fb759e6b89bde9a44300a89a02b7d72477eff8894c857c5defb" target="_blank" rel="noopener">
             View live transactions on testnet.cspr.live →
           </a>
@@ -339,7 +357,7 @@
     │
     ▼
 <span class="arch-green">Agent executes</span> if safe=true
-<span style="color:#f85149">Agent pauses</span>  if safe=false → saves gas
+<span class="arch-red">Agent pauses</span>  if safe=false → saves gas
         </div>
       </div>
     </div>
@@ -354,34 +372,34 @@
         <div class="contract-info">SequencerOracle — deployed July 16, 2026</div>
         <div class="contract-hash">hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a</div>
 
-        <div style="margin-top:16px">
-          <div style="font-size:11px;color:#6e7681;margin-bottom:8px">Entry Points:</div>
-          <div style="font-size:11px;color:#8b949e;line-height:2">
-            <span style="color:#7c3aed">update()</span> — authorized caller only, pushes oracle state<br>
-            <span style="color:#3fb950">is_safe()</span> → bool — primary check for DeFi agents<br>
-            <span style="color:#3fb950">get_state()</span> → JSON — full snapshot
+        <div class="ep-block">
+          <div class="ep-label">Entry Points:</div>
+          <div class="ep-list">
+            <span class="ep-write">update()</span> — authorized caller only, pushes oracle state<br>
+            <span class="ep-read">is_safe()</span> → bool — primary check for DeFi agents<br>
+            <span class="ep-read">get_state()</span> → JSON — full snapshot
           </div>
         </div>
 
-        <div style="margin-top:16px;background:#0d2c0d;border:1px solid #238636;border-radius:6px;padding:10px 12px">
-          <div style="font-size:11px;color:#3fb950;font-weight:600">✓ Caller authorization enforced</div>
-          <div style="font-size:10px;color:#8b949e;margin-top:4px">update() checks the caller against the deploying account on every call — added after the July 16 redeploy so only this agent can write oracle state.</div>
+        <div class="auth-box">
+          <div class="auth-title">✓ Caller authorization enforced</div>
+          <div class="auth-note">update() checks the caller against the deploying account on every call — added after the July 16 redeploy so only this agent can write oracle state.</div>
         </div>
 
-        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+        <div class="link-row">
           <a href="https://testnet.cspr.live/deploy/2578359cc8ffcdac8316d6002d3aabed26888c102c8d69a2ccd3239f3fcd3326"
              target="_blank" rel="noopener"
-             style="font-size:10px;color:#7c3aed;background:#1f1a2e;padding:4px 10px;border-radius:6px;text-decoration:none">
+             class="link-btn">
             Deploy TX →
           </a>
           <a href="https://github.com/kant19801201behax5/silicon-dna-release"
              target="_blank" rel="noopener"
-             style="font-size:10px;color:#7c3aed;background:#1f1a2e;padding:4px 10px;border-radius:6px;text-decoration:none">
+             class="link-btn">
             GitHub →
           </a>
           <a href="https://dorahacks.io/buidl/43859"
              target="_blank" rel="noopener"
-             style="font-size:10px;color:#7c3aed;background:#1f1a2e;padding:4px 10px;border-radius:6px;text-decoration:none">
+             class="link-btn">
             DoraHacks →
           </a>
         </div>
@@ -456,13 +474,15 @@ async function update() {
           <span>${rev}${p99}ms</span>
         </div>
         <div class="chain-bar-bg">
-          <div class="chain-bar ${cls}" style="width:${barWidth(p99)}%"></div>
+          <div class="chain-bar ${cls}" data-w="${barWidth(p99)}"></div>
         </div>
       </div>`;
-    }).join('') + `<div class="chain-row" style="margin-top:4px">
+    }).join('') + `<div class="chain-row chain-row-casper">
         <div class="chain-name"><span>Casper</span><span>monitored</span></div>
-        <div class="chain-bar-bg"><div class="chain-bar ok" style="width:20%"></div></div>
+        <div class="chain-bar-bg"><div class="chain-bar ok" data-w="20"></div></div>
       </div>`;
+    // widths are data-driven — set here so no inline style= lives in the markup
+    chainsEl.querySelectorAll('.chain-bar[data-w]').forEach(el => { el.style.width = el.dataset.w + '%'; });
 
     document.getElementById('chain-updated').textContent =
       new Date().toLocaleTimeString();
