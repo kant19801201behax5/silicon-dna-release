@@ -10,7 +10,7 @@
 
 An autonomous intelligence system that monitors 6 blockchain sequencers in real time and predicts network stress events **before they become visible on-chain**.
 
-**The core insight:** transaction revert ratios on Arbitrum (`arb_revert_ratio`) are causal leading indicators of cross-chain stress events — including MEV wars, sequencer stalls, and gas price spikes. We discovered this through 206,000+ RTT measurements over 14 months of continuous data collection.
+**The core insight:** transaction revert ratios on Arbitrum (`arb_revert_ratio`) are causal leading indicators of cross-chain stress events — including MEV wars, sequencer stalls, and gas price spikes. We discovered this on a 206,040-record production feed snapshot (the dataset behind [`proof/mev_war_2026-05-31.md`](proof/mev_war_2026-05-31.md)), collected continuously since March 15, 2026.
 
 **Proven:** May 31, 2026 — detected a 72.1% MEV war **3 minutes before the acute stall** on Arbitrum and Base.
 
@@ -76,15 +76,25 @@ require(oracle.is_legitimate(), "Silicon DNA: traffic not verified");
 
 ---
 
-## Data — 14 Months of Live Measurements
+## Data — Live Measurements Since March 15, 2026
+
+*Corrected 2026-07-25: this section previously read "14 Months of Live Measurements". That could not
+be right — collection starts March 15, 2026, so as of July 25, 2026 it is **132 days (~4.3 months)**.
+The "206,000+" figure was also being presented as a lifetime total; it is in fact the size of the
+production feed snapshot used for the May 31 analysis (`proof/mev_war_2026-05-31.md`: "206,040
+records"). Current throughput, measured off the live feed on 2026-07-25, is far higher.*
 
 | Metric | Value |
 |--------|-------|
-| Total measurements | 206,000+ RTT samples |
+| Continuous collection | **132 days** (March 15 → July 25, 2026) |
+| Analysis dataset | **206,040** feed records (May 31 MEV-war study) |
+| Current throughput | **~258,700 measurements/day** (150,620 chain-metric records in a measured 13.97 h window, 6 chains @ 2 s) |
+| Lifetime total | not published — raw feed is rotated, so a cumulative count is not independently re-derivable; the per-day rate above is |
 | Data collection start | March 15, 2026 |
 | Chains monitored | Mantle, Arbitrum, Base, Optimism, zkSync, Casper (6 chains; Ethereum L1 also probed separately for blob-fee/gas-pressure signals) |
 | Causal model R² | 0.998 |
-| Best lead time proven | 27 seconds before MEV peak (May 17, 2026) |
+| Lead time — documented in this repo | **3 minutes**: `arb_revert_ratio` crossed 15% at 01:07 UTC, acute stall at 01:10 (May 31, 2026 — see [`proof/`](proof/mev_war_2026-05-31.md)) |
+| Lead time — separate earlier event | **27 seconds**: RTT spike at 23:29:50 → Base revert ratio crossed its threshold at 23:30:10 (May 17, 2026). Different signal pair, so not directly comparable to the 3-minute figure above; the raw log for it lives in the internal write-up, not in this repo |
 | MEV war documented | May 31, 2026 — 72.1% revert ratio |
 | Dashboard | https://phoenix-zero.vercel.app |
 | Public feed | https://rtt.phoenix-ai.work/api/public-feed |
@@ -106,7 +116,8 @@ MEV war:   0.72       (72%) — May 31 event
 **Why this is valuable for trading:**
 - MEV bots start sandwiching transactions → revert ratio rises
 - This happens **before** gas prices spike (which is what everyone else watches)
-- 27-second lead time = actionable for DeFi agents and trading strategies
+- Lead time is actionable for DeFi agents and trading strategies: 3 minutes on the May 31 event
+  documented in [`proof/`](proof/mev_war_2026-05-31.md), 27 seconds on the May 17 Base event
 
 This is the data signal that institutional MEV searchers know about but don't publish.
 

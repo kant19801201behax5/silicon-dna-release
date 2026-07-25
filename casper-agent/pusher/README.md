@@ -15,25 +15,32 @@
 
 Both scripts compile cleanly (`python -m py_compile`).
 
-## Install constraint (important)
+## Install — fixed 2026-07-25, the demo now needs no toolchain
 
-`pip install -r requirements.txt` **requires a Rust toolchain** on modern Python.
+`pip install -r requirements.txt` **used to require a Rust toolchain**, because
+`pycspr==1.2.0` sat in that file as a hard requirement. It pins
+`blake3<0.5.0,>=0.4.1`, and the only `blake3` in that range (`0.4.1`) is a source
+sdist with **no wheel for Python 3.12+**, so pip tried to compile it from Rust
+and stopped at `metadata-generation-failed`. Upstream `pycspr` constraint, not a
+bug in this code — but it blocked the script most people want to run.
 
-Why: `pycspr==1.2.0` (its latest release) pins `blake3<0.5.0,>=0.4.1`. The only
-`blake3` in that range is `0.4.1`, published as a source sdist with **no wheel
-for Python 3.12+**, so pip tries to compile it from Rust. Without a Rust
-toolchain the install stops at `metadata-generation-failed` on `blake3`.
+`pycspr` is now **optional**, and the split follows what the scripts actually import:
 
-This is an upstream `pycspr` constraint — the pusher code itself is fine.
+| Script | Needs | Status |
+| --- | --- | --- |
+| `casper_defi_agent.py` — autonomous-agent demo | `requests`, `python-dotenv` only | ✅ **Runs with a plain `pip install -r requirements.txt`.** Verified 2026-07-25 against the live oracle: read `arb_revert=0.0% base_p99=9ms`, executed all 3 queued transactions, printed its session summary |
+| `casper_oracle_pusher.py` — on-chain pusher | `pycspr` (optional) | Import is already guarded (`try: import pycspr / except ImportError: PYCSPR_OK = False`), so the module loads and reports the missing dependency instead of crashing |
 
-### Options to install
+```bash
+pip install -r requirements.txt   # requests + python-dotenv, no toolchain
+python casper_defi_agent.py       # agent demo against the live oracle
+```
 
-- **Recommended:** don't. Use [`../ts-agent/`](../ts-agent/) — it needs only
-  Node.js and reproduces the full agent behaviour (see
-  [`../TESTING_GUIDE.md`](../TESTING_GUIDE.md) §6–7).
-- If you specifically need the Python path, install a Rust toolchain
-  (`rustup`) first so pip can build `blake3 0.4.1` from source, then
-  `pip install -r requirements.txt`.
+Only if you want the Python pusher to sign and send real deploys: install a Rust
+toolchain (`rustup`), then `pip install pycspr==1.2.0`.
+
+The production agent remains the Node.js one in [`../ts-agent/`](../ts-agent/) —
+see [`../TESTING_GUIDE.md`](../TESTING_GUIDE.md) §6–7.
 
 ## Run (after a successful install)
 

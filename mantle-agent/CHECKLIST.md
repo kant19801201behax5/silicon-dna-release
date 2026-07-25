@@ -17,7 +17,7 @@
 | Criterion | Status | Score Target |
 |-----------|--------|-------------|
 | Insight value (15): unique on-chain insight | ✅ arb_revert_ratio as MEV leading indicator | 13/15 |
-| Data source quality (15): breadth, freshness | ✅ 6 chains, 2s granularity, 14 months | 13/15 |
+| Data source quality (15): breadth, freshness | ✅ 6 chains, 2s granularity, continuous since 2026-03-15 (132 days as of 2026-07-25) | 13/15 |
 | Investment utility (12): informs real decisions | ✅ 27s lead time, May 31 case study | 10/12 |
 | Scalability (8): can grow | ✅ new chain < 1 hour | 7/8 |
 | **Part B estimate** | | **~43/50** |
@@ -59,8 +59,8 @@
 
 | Item | Status |
 |------|--------|
-| JARVIS / Phoenix AGI | ✅ NOT mentioned anywhere |
+| Internal (non-public) systems | ✅ NOT mentioned anywhere |
 | Private keys | ✅ .env only (gitignored) |
-| DO server IP 198.211.103.36 | ✅ NOT in any file |
+| Production server IP | ✅ NOT in any file |
 | Signal auth token | ✅ Uses public feed only |
 | Sensitive trading data | ✅ Only public metrics shown |

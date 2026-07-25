@@ -27,11 +27,22 @@ if (!CONTRACT_ADDRESS || !PRIVATE_KEY) {
   process.exit(1);
 }
 
-// Minimal ABI — only the functions we call
+// Minimal ABI — only the functions we call.
+//
+// FIX 2026-07-25: this list used to also declare
+//   'function update_count() external view returns (uint256)'
+// which does not exist on TuringOracle.sol. `update_count` is a FIELD of the state struct
+// (TuringOracle.sol:31), readable through `get_state()`, not a standalone getter — the contract
+// exposes exactly: update, get_state, is_legitimate, owner, staleness_seconds, transfer_ownership
+// (verified by compiling the contract with solc 0.8.24: 0 errors, 0 warnings, 6 ABI functions).
+// Nothing here called it, so the pusher worked — but anyone reading this ABI and calling
+// `oracle.update_count()` would have hit a decode failure against the deployed contract.
+// Read the counter via `(await oracle.get_state()).update_count` instead.
 const ABI = [
   'function update(bool human_traffic, uint256 trust_bps, uint256 bot_ratio_bps, bool mantle_safe, uint256 p99_ms) external',
   'function get_state() external view returns (tuple(bool human_traffic, uint256 trust_score_bps, uint256 bot_ratio_bps, bool mantle_safe, uint256 p99_ms, uint256 timestamp, uint256 update_count))',
-  'function update_count() external view returns (uint256)',
+  // Advertised in README as the DeFi-facing gate; declared here so the same ABI can be reused by readers.
+  'function is_legitimate() external view returns (bool)',
 ];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

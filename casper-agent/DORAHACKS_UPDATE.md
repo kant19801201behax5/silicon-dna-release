@@ -18,7 +18,7 @@ Autonomous DeFi agents face two critical shortcomings:
 No marketing. No voiceover. Raw screen recording from a working production system.
 
 - [0:00–0:22] Live agent logs: network safe → arb_revert spikes to 16% → agent instantly pauses (🚨 UNSAFE — pausing) → resumes after conditions clear.
-- [0:22–0:40] Casper Testnet Explorer: 962 confirmed `oracle.update()` transactions. Contract in Rust (casper-contract 5.1.1, native WASM — no Odra abstraction layer).
+- [0:22–0:40] Casper Testnet Explorer: 962 confirmed `oracle.update()` transactions on the original contract (the active contract has since added 1,806 more — 2,768 total as of 2026-07-25). Contract in Rust (casper-contract 5.1.1, native WASM — no Odra abstraction layer).
 - [0:40–0:52] Raw `/api/public-feed` JSON: live `arb_revert`, `base_p99`, `gas_pressure` — the exact payload DeFi agents pay for via x402.
 
 ---
@@ -31,7 +31,7 @@ A production RTT oracle checks 6 blockchain sequencers every 2 seconds. Publishe
 
 Chains monitored: Arbitrum One · Base · Optimism · zkSync Era · Mantle · Casper
 
-**Why this is an agentic system, not just a cron script:** the agent perceives its environment (public feed), holds a goal (don't waste the agent's gas), makes a decision (safe/unsafe), and acts on-chain (`update()`) — with no human in the loop on any cycle, 24/7. The safety decision is threshold logic (deliberately interpretable and auditable, not a black box). Access to oracle data is separately gated by Silicon DNA (L8–L12 below): statistical KL-divergence clustering of Sybil patterns — genuinely trained on data; the final 3-class classifier (HUMAN/LEGIT_AGENT/MALICIOUS_BOT) is interpretable threshold logic on top of those signals, not a trained ML model.
+**Why this is an agentic system, not just a cron script:** the agent perceives its environment (public feed), holds a goal (don't waste the agent's gas), makes a decision (safe/unsafe), and acts on-chain (`update()`) — with no human in the loop on any cycle, 24/7. The safety decision is threshold logic (deliberately interpretable and auditable, not a black box). Access to oracle data is separately gated by Silicon DNA (see "Layer 2" below): statistical KL-divergence clustering of Sybil patterns — genuinely computed from observed traffic; the final 3-class classifier (HUMAN/LEGIT_AGENT/MALICIOUS_BOT) is interpretable threshold logic on top of those signals, not a trained ML model.
 
 API for agents (x402 micropayments):
 
@@ -62,11 +62,21 @@ not yet exercised in production.
 **Layer 2 — Silicon DNA (agent identity gate)**
 
 Silicon DNA is a separate, full-time 12-layer bot-detection system that runs against
-browser/session traffic to this domain: L0 ML-KEM-768 post-quantum channel, L1–L7
-CPU jitter physics / Spearman correlation / Argon2id PoW / entropy compaction,
-L8–L12 KL-divergence Sybil clustering, a threshold-based 3-class agent classifier
-(interpretable logic, not a trained ML model), and an HMAC-based commit-reveal
-proof ("ZK-lite" — not true zero-knowledge, all layer bits are visible in plaintext).
+browser/session traffic to this domain. The layers are **L0–L11** (12 of them, numbered from zero —
+canonical list in [`../src/SILICON_DNA_LAYERS.md`](../src/SILICON_DNA_LAYERS.md)): L0 CPU jitter
+physics, L1 ML-KEM-768 post-quantum channel, L2 TLS fingerprint (a fixed placeholder pending real
+JA4), L3 behavioral rhythm, L4 Argon2id proof-of-work, L5 silicon hash, L6 reputation cache,
+L7 online one-class-SVM anomaly detector, L8 timing consistency, L9 network telemetry, L10 causal-engine
+integration, L11 composite trust score → the 3-class verdict (HUMAN / LEGIT_AGENT / MALICIOUS_BOT),
+which is interpretable threshold logic, not a trained ML model. Cross-IP Sybil cohorting by
+**KL-divergence** on behavioural fingerprints (`sybilCluster.ts`, cohort threshold 0.15) runs
+alongside the stack as its own service rather than as one of the numbered layers. There is also an
+HMAC-based commit-reveal proof ("ZK-lite" — not true zero-knowledge, all layer bits are visible in
+plaintext).
+
+*Corrected 2026-07-25: this paragraph previously read "L0 ML-KEM-768 … L8–L12 KL-divergence Sybil
+clustering". Two errors — L0 and L1 were swapped relative to the canonical list, and there is no L12
+(the stack ends at L11).*
 
 **What actually connects it to the x402 oracle (verified live, 2026-07-21):** an IP
 that Silicon DNA's own detection has already flagged and banned is rejected with
@@ -106,7 +116,17 @@ Entry points:
 - `is_safe() → bool` — any Casper DeFi agent checks this before transacting
 - `get_state() → JSON` — full Oracle snapshot
 
-June 3 – July 6, 2026 (original contract): **962 transactions** (verifiable on the explorer) · **3,254 autonomous safety decisions** (⚠️ historical count from that period's logs; the current `agent.js` has no separate counter for this metric, so it can't be re-derived from the current system)
+June 3 – July 6, 2026 (original contract): **962 transactions** (verifiable on the explorer) ·
+**3,254 autonomous safety decisions** (historical count from that period's logs).
+
+**Active contract, re-verified from live logs 2026-07-25 01:18 UTC:** **1,806** `update()` calls,
+**14** safety pauses, **35.0 CSPR** of gas saved by not transacting while unsafe — agent up
+**9,178 min** continuously with **0 restarts**. Running total across both contracts: **2,768** updates.
+
+*Correction (2026-07-25):* the line above previously claimed the current `agent.js` "has no separate
+counter for this metric, so it can't be re-derived". That was wrong — the agent prints
+`Summary | pushed=… paused=… gas_saved=…` every 5 minutes, so both the push count and the pause
+count are live and re-derivable at any moment.
 
 **Sample testnet transactions:**
 
@@ -139,7 +159,7 @@ multi-year roadmap makes the same point). Casper has also **joined ERC-7943
 and previously contributed to ERC-3643** — the emerging standards for
 tokenized RWAs and for permissioned, compliance-gated token issuance. Both
 are fundamentally about *who is eligible to hold or receive a token* — i.e.
-counterparty identity screening — which is exactly what Silicon DNA's L8–L12
+counterparty identity screening — which is exactly what Silicon DNA's identity
 gate already does (KL-divergence Sybil clustering + a HUMAN / LEGIT_AGENT /
 MALICIOUS_BOT classifier). We do **not** implement those token standards and
 don't claim to; the point is narrower and honest: regulated RWA settlement on
@@ -186,14 +206,50 @@ Any Casper DeFi Agent:
 
 ## Production Proof
 
-- **Live since:** March 15, 2026
-- **Data:** 206,000+ RTT measurements
-- **On-chain (original contract, June 3 – July 6):** 962 confirmed updates (verifiable) · 3,254 autonomous safety blocks (⚠️ historical count, not re-derived from the current system)
+- **Live since:** March 15, 2026 (132 days of continuous collection as of 2026-07-25)
+- **Data:** ~258,700 measurements/day across 6 chains, measured off the live feed 2026-07-25
+  (150,620 chain-metric records in a 13.97 h window). The May 31 study used a 206,040-record feed
+  snapshot; the raw feed is rotated, so a lifetime cumulative total is not independently verifiable
+  — the per-day rate is
+- **On-chain (original contract, June 3 – July 6):** 962 confirmed updates (verifiable) · 3,254 autonomous safety blocks (historical count from that period)
+- **On-chain (active contract, as of 2026-07-25 01:18 UTC):** **1,806** confirmed updates · **14** safety pauses · **35.0 CSPR** gas saved · **9,178 min** uptime, 0 restarts — all re-derived from live logs
 - **On-chain (active contract, since July 16):** live updates every 5 minutes — see explorer above
 - **Casper dashboard:** https://rtt.phoenix-ai.work/casper
 - **Main dashboard:** https://phoenix-zero.vercel.app
 - **Public feed:** https://rtt.phoenix-ai.work/api/public-feed
 - **GitHub:** https://github.com/kant19801201behax5/silicon-dna-release
+
+---
+
+## Against the Final-Round Judging Criteria
+
+Mapped one-to-one onto the published criteria, with the evidence for each — every row is checkable
+today, not a promise.
+
+| Criterion | Evidence in this submission |
+| --- | --- |
+| **Technical execution** — code quality, architecture, completeness | 4-layer stack, each independently runnable: Rust/WASM contract (3 entry points), Node.js agent, TypeScript SDK, MCP server. Agent test suite **21/21**. CI builds the contract from a clean clone, typechecks the SDK and exercises the MCP handshake on every push |
+| **Innovation and originality** | The signal itself: L2 sequencer *revert ratio* as a leading indicator of cross-chain stress. Not published in any public dataset — measured directly, and documented against raw feed data in [`../proof/mev_war_2026-05-31.md`](../proof/mev_war_2026-05-31.md) (72.1% MEV war, 3-minute lead) |
+| **Use of AI / agentic systems** | Full perceive → goal → decide → act loop with no human in any cycle: reads the feed, holds the goal "don't waste gas", decides safe/unsafe, calls `update()` on-chain. **1,806** autonomous calls, **14** self-initiated pauses, **35.0 CSPR** saved, **9,178 min** uptime, 0 restarts. Uses two components of the Casper AI Toolkit directly — **x402 micropayments** and an **MCP server** |
+| **Real-world application (DeFi / RWA)** | DeFi: one-call `is_safe()` gate any Casper protocol can require before transacting. RWA: `get_rwa_settlement_signal` MCP tool pairing network-safety with counterparty screening — the two checks regulated settlement needs. Reused outside this hackathon already (Tenderly circuit-breaker, separate public repo) |
+| **User experience and design** | Live dashboard at [rtt.phoenix-ai.work/casper](https://rtt.phoenix-ai.work/casper) and [phoenix-zero.vercel.app](https://phoenix-zero.vercel.app); zero-setup verification via `curl` on the public feed; a step-by-step [TESTING_GUIDE.md](./TESTING_GUIDE.md) written for a judge with no prior context |
+| **Smart-contract work** | Deployed and live on Casper Testnet: `hash-2a7ebbc9…261f3a`, entry points `update` / `is_safe` / `get_state`, receiving transactions right now. Contract redeployed once to fix a real `EntryPointType` bug after a network protocol upgrade — documented rather than hidden |
+| **Long-term launch plans** | See the section below: production since March 2026 (predates the buildathon), CSPR.cloud key tested, native Casper x402 client ready to wire in, direct contact with the Casper developer TG group, oracle already reused in a second public project |
+| **Long-term ecosystem impact** | Built as shared infrastructure, not a single-app feature: any Casper agent can read `is_safe()` free on-chain or pay $0.01 via x402 for the richer feed. Directly serves Casper's stated direction — a trust layer for the agentic economy and regulated RWA settlement |
+
+**This is the buildathon's own example #2.** The official build prompts list *"RWA oracle agents with
+verifiable on-chain identity — an agent that gathers off-chain data, runs a risk-scoring model, and
+publishes verified data on-chain via Casper's x402, maintaining verifiable identity and reputation
+scoring."* That is precisely this system: off-chain 6-chain telemetry → threshold risk model →
+on-chain publication → x402-metered access gated by an identity layer. We arrived at it independently
+(the oracle predates the buildathon), which is why the fit is structural rather than cosmetic.
+
+**Market timing:** CSPR began trading on Kraken on **July 21, 2026** — five days before this
+submission ([Kraken](https://blog.kraken.com/product/asset-listings/cspr-is-available-for-trading),
+[Decrypt](https://decrypt.co/373933/casper-network-now-available-for-trading-on-kraken)). Casper
+positions itself as infrastructure for regulated RWAs and machine-native commerce; network-safety and
+agent-identity are the two primitives machine-to-machine settlement needs before it can be trusted
+with value.
 
 ---
 

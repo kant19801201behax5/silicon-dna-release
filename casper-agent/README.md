@@ -1,7 +1,40 @@
 # Phoenix Zero × Silicon DNA — Casper Sequencer Health Oracle
 
-> **Casper Agentic Buildathon 2026** submission
-> Track: On-chain AI services and infrastructure
+> **Casper Agentic Buildathon 2026 — Final Round** submission
+> Track (per the rules): the buildathon runs a **single** track — the Casper Innovation Track.
+> Focus areas: Agentic AI applied to DeFi and/or RWA on Casper.
+>
+> **What we are inside that track: on-chain AI services and infrastructure.** Not an app that happens
+> to use an oracle — the oracle *is* the product, and it is shared infrastructure any other Casper
+> agent can build on (free `is_safe()` on-chain, or $0.01/call via x402 for the full feed). It ran in
+> production for three months before this buildathon and is already consumed by a second, unrelated
+> public project. That is the category we are competing in.
+
+---
+
+## Track Fit — Agentic AI × DeFi × RWA
+
+The buildathon asks for production-ready applications at the convergence of **Agentic AI**, **DeFi**
+and **RWA** on Casper. All three are addressed by working, live components — each verifiable right
+now, not planned:
+
+| Focus area | What is actually running | How to check it yourself |
+| --- | --- | --- |
+| **Agentic AI** | A Node.js agent perceives (public feed), holds a goal (don't waste gas), decides (safe/unsafe) and acts on-chain (`update()`) every 5 min, 24/7, no human in the loop. **1,806** `update()` calls on the active contract, **14** autonomous pauses, **35.0 CSPR** of gas saved, **9,178 min** uptime with 0 restarts | `ts-agent/` + testnet explorer; `DRY_RUN=true` reproduces the decision loop locally |
+| **DeFi** | Any Casper DeFi agent can gate a transaction on `is_safe()` in one on-chain call. TypeScript SDK reads the live contract; x402 endpoint monetises the same data at $0.01/call (`HTTP 402` with a real payment challenge) | `sdk-typescript/` demo prints EXECUTE/BLOCK per transaction; `curl -i https://rtt.phoenix-ai.work/api/v1/safe` |
+| **RWA** | Regulated RWA settlement needs *both* a network-safety check and counterparty screening. Exposed as one MCP tool, `get_rwa_settlement_signal`, returning `network_safe_to_settle` plus an explicit, honest note on what the identity gate does and does not cover | `mcp-server/` — call the tool; Casper itself frames its roadmap around regulated RWAs and machine-native commerce |
+
+**Machine-native commerce context:** CSPR went live for trading on Kraken on **July 21, 2026**
+([Kraken](https://blog.kraken.com/product/asset-listings/cspr-is-available-for-trading),
+[Decrypt](https://decrypt.co/373933/casper-network-now-available-for-trading-on-kraken)) — four days
+before this submission. Casper's own positioning is infrastructure for regulated RWAs and
+machine-native commerce; a network-safety oracle plus an agent-identity gate are exactly the two
+primitives that machine-to-machine settlement needs before it can be trusted with value.
+
+**Submission requirements:** public repo ✅ (this one) · demo video ✅
+([52 s, Casper-specific](https://youtu.be/KtTrz23B92w)) · working prototype on Casper Testnet ✅
+(contract hash below, receiving `update()` right now) · documentation ✅ (this README +
+[TESTING_GUIDE.md](./TESTING_GUIDE.md), which walks a judge through on-chain verification step by step).
 
 ---
 
@@ -11,7 +44,7 @@ An autonomous agent that monitors 6 blockchain sequencers in real time and publi
 
 **Live data since:** March 15, 2026
 **Chains monitored:** Arbitrum, Base, Optimism, zkSync, Mantle, Casper
-**Measurements collected:** 206,000+
+**Measurement throughput:** ~258,700/day across the 6 chains (measured off the live feed 2026-07-25); the May 31 study below was run on a 206,040-record feed snapshot
 **Proven:** MEV war May 31, 2026 — 72.1% revert ratio detected 3 minutes early
 
 **Market context:** CSPR went live for trading on Kraken July 21, 2026, and Casper has joined **ERC-7943** (RWA tokenization) and contributed to **ERC-3643** (permissioned, compliance-gated issuance). Regulated RWA settlement needs both a network-safety check *and* counterparty identity screening — the two signals this project already provides (network oracle + Silicon DNA identity gate). We don't implement those token standards; see [DORAHACKS_UPDATE.md](./DORAHACKS_UPDATE.md) for the honest framing.
@@ -150,25 +183,54 @@ rustup component add rust-src --toolchain nightly
 # 2. Get testnet CSPR (one-time 5000 CSPR grant per account)
 # Faucet: https://testnet.cspr.live/tools/faucet
 
-# 3. Build — must target pure MVP wasm (this network's execution engine
-#    rejects the bulk-memory / sign-ext ops modern LLVM emits by default)
+# 3. Vendor + patch casper-contract 5.1.1 (REQUIRED — one-time, idempotent)
+#    Upstream 5.1.1 does NOT compile on any current rustc: it puts #[no_mangle] on
+#    #[panic_handler] / #[alloc_error_handler], which rustc rejects as internal language items.
+#    This script fetches the crate from crates.io into vendor/ and removes those two attributes
+#    (see patches/). Cargo.toml's [patch.crates-io] points at vendor/casper-contract.
+#    Added 2026-07-25: that path used to be absolute and pointed at the maintainer's own server,
+#    so nobody else could build this contract — the build died on the first crate.
 cd oracle-contract
+./prepare_patched_crate.sh
+
+# 4. Build — must target pure MVP wasm (this network's execution engine
+#    rejects the bulk-memory / sign-ext ops modern LLVM emits by default)
 RUSTFLAGS="-C link-arg=--import-undefined -C target-cpu=mvp" \
   cargo +nightly build -Z build-std=core,alloc --release --target wasm32-unknown-unknown
+# Expected: target/wasm32-unknown-unknown/release/sequencer_oracle.wasm (~145 KB)
+# Note: nightly is mandatory — on stable this fails with error[E0554], and without
+# --import-undefined the link step fails on casper_* host symbols.
 
-# 4. Deploy (see ts-agent/deploy_contract.js) and copy the resulting
+# 5. Deploy (see ts-agent/deploy_contract.js) and copy the resulting
 #    contract hash into ts-agent/.env as CONTRACT_HASH
 ```
 
-⚠️ **Known build gap:** `Cargo.toml` currently has `[patch.crates-io] casper-contract
-= { path = "/opt/casper-oracle/casper-contract-patched" }` — an absolute path on
-the production server, not included in this repo. A fresh `cargo build` from a
-clean clone will fail on this line as-is. `casper-contract 5.1.1` is published
-normally on crates.io, so removing that `[patch.crates-io]` block should let a
-fresh clone build, but this hasn't been verified end-to-end against a clean
-checkout. Until it is, treat the deployed, on-chain contract (hash below, live
-and independently verifiable via the testnet explorer) as the source of truth
-rather than rebuilding from source.
+✅ **Build gap CLOSED — verified end-to-end 2026-07-25.** A clean clone now builds.
+
+This section previously carried a known gap: `Cargo.toml` pointed `[patch.crates-io]` at
+`/opt/casper-oracle/casper-contract-patched`, an absolute path on the production server that is not
+part of this repo, so a fresh clone died on that line. It also proposed that simply *removing* the
+`[patch.crates-io]` block "should let a fresh clone build". **That proposal was tested and is wrong** —
+upstream `casper-contract 5.1.1` does not compile on any current rustc at all:
+
+```
+error[E0554]: `#![feature]` may not be used on the stable release channel
+error: `#[no_mangle]` cannot be used on internal language items
+```
+
+The crate puts `#[no_mangle]` on `#[panic_handler]` / `#[alloc_error_handler]`, which rustc now
+rejects as internal language items (reproduced on rustc 1.97.1, both with and without the patch).
+
+**Fix:** `prepare_patched_crate.sh` (step 3 above) fetches the crate from crates.io into `vendor/`
+and applies `patches/casper-contract-5.1.1-no_mangle.patch` — two removed attributes, nothing else;
+the patch is diffed against upstream and tracked in this repo. `[patch.crates-io]` now points at the
+relative `vendor/casper-contract`.
+
+**Verification:** clean files → `./prepare_patched_crate.sh` → the build command above → produced
+`sequencer_oracle.wasm` at **145,063 bytes**, against **145,067** for the artefact of the live
+deployed contract (the 4-byte delta is the project path length embedded in metadata). Anyone can now
+rebuild from source and compare; the on-chain contract remains independently verifiable via the
+testnet explorer either way.
 
 ### Run the Agent
 

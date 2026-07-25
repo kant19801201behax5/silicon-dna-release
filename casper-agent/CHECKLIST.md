@@ -5,7 +5,7 @@
 | Requirement | Status | Notes |
 |-------------|--------|-------|
 | Working prototype on Casper Testnet | ✅ DONE | Active contract: hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a |
-| Blockchain transactions generated | ✅ DONE | 962 confirmed update() calls (June 3 – July 6) on original contract, live updates resumed July 16 on redeployed contract |
+| Blockchain transactions generated | ✅ DONE | 962 confirmed `update()` calls on the original contract (June 3 – July 6) **plus 1,806 on the active contract** as of 2026-07-25 01:18 UTC — agent up 9,178 min continuously, 0 restarts (figure re-verified from live logs 2026-07-25; the old note said only "ongoing", which undersold it) |
 | Open source GitHub repo | ✅ DONE | https://github.com/kant19801201behax5/silicon-dna-release |
 | README with documentation | ✅ DONE | README.md complete with architecture + setup |
 | Demo video | ✅ DONE | https://youtu.be/o-CQfiSfQ4o (general Phoenix Zero walkthrough) — Casper-specific 52s clip: https://youtu.be/KtTrz23B92w |
@@ -17,8 +17,9 @@
 | Active contract hash | hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a |
 | Active contract deployed | July 16, 2026 |
 | Original contract hash | hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d (June 3 – July 6, 2026) |
-| Total on-chain updates | 962 (original) + ongoing (active) |
-| Safety gate blocks | 3,254 (autonomous decisions) — ⚠️ historical count from the original contract's period (Jun 3–Jul 6); no live counter for this exists in the current deployed `agent.js`, so this figure cannot be independently re-derived from current logs |
+| Total on-chain updates | 962 (original) + **1,806** (active, as of 2026-07-25 01:18 UTC) = **2,768** |
+| Agent uptime | **9,178 min** continuous (since 2026-07-18 16:20 UTC), **0 restarts** |
+| Safety gate blocks | 3,254 on the original contract's period (Jun 3–Jul 6) — historical. ✅ **Correction 2026-07-25:** the earlier note claimed "no live counter for this exists in the current deployed `agent.js`". That was wrong — the agent prints `paused=` in its Summary line every 5 min. Current active-contract value: **paused=14**, alongside **gas_saved=35.0 CSPR**. Both are re-derivable from live logs at any time. |
 | Wallet | 0202494268f650725fb759e6b89bde9a44300a89a02b7d72477eff8894c857c5defb |
 | Explorer | https://testnet.cspr.live |
 | Dashboard | https://phoenix-zero.vercel.app |
@@ -31,9 +32,10 @@
 
 | Item | Status |
 |------|--------|
-| JARVIS URL | ✅ NOT in code or README |
-| JARVIS token | ✅ NOT in code or README |
-| DO server IP 198.211.103.36 | ✅ NOT in any casper-agent file |
+| Internal (non-public) system names | ✅ no references anywhere |
+| Internal service URL | ✅ NOT in code or README |
+| Internal service token | ✅ NOT in code or README |
+| Production server IP | ✅ NOT in any casper-agent file |
 | Private keys | ✅ Only in .env (gitignored) |
 | Signal format with causal.r2 | ✅ REMOVED — uses public API only |
 | SIGNAL_TOKEN | ✅ REMOVED — public feed needs no auth |

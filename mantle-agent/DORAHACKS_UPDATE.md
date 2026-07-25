@@ -5,7 +5,7 @@
 ---
 
 ## Vision (256 chars)
-Silicon DNA turns 14 months of live sequencer telemetry into investment-grade intelligence. 206K+ measurements. R²=0.998 causal model. Detected a 72.1% MEV war 3 minutes early. Now published on-chain via TuringOracle on Mantle Sepolia.
+Silicon DNA turns continuous live sequencer telemetry into investment-grade intelligence - running since 2026-03-15, ~258,700 measurements/day across 6 chains. R²=0.998 causal model. Detected a 72.1% MEV war 3 minutes early. Now published on-chain via TuringOracle on Mantle Sepolia.
 
 ---
 
@@ -21,7 +21,7 @@ Silicon DNA changes that.
 
 ### What We Built
 
-**14 months of continuous blockchain telemetry collection**, turned into a live causal intelligence system.
+**Continuous blockchain telemetry collection since 2026-03-15**, turned into a live causal intelligence system.
 
 **Phoenix Zero** probes 6 chains every 2 seconds:
 - Mantle, Arbitrum, Base, Optimism, zkSync, Casper (Ethereum L1 also probed separately for blob-fee/gas-pressure)
@@ -29,7 +29,7 @@ Silicon DNA changes that.
 
 **The Discovery: arb_revert_ratio as a leading indicator**
 
-After analyzing 206,000+ data points, we found that `arb_revert_ratio` (Arbitrum transaction revert ratio) is a **causal leading indicator** of cross-chain stress events:
+After analyzing a 206,040-record production feed snapshot, we found that `arb_revert_ratio` (Arbitrum transaction revert ratio) is a **causal leading indicator** of cross-chain stress events:
 
 ```
 Normal:    4–8%  (baseline)
@@ -95,7 +95,7 @@ Note on the TLS fingerprint layer: real JA4 fingerprinting requires reading the 
 ### Live Proof
 
 **Network monitoring:**
-- 206,000+ RTT measurements since March 15, 2026
+- Continuous RTT measurement since March 15, 2026 - ~258,700/day across 6 chains (measured off the live feed 2026-07-25); the May 31 study used a 206,040-record snapshot
 - Dashboard: https://phoenix-zero.vercel.app
 - Public feed: https://rtt.phoenix-ai.work/api/public-feed
 
@@ -131,9 +131,9 @@ Any agent reading our oracle paused at 01:07 — **8 minutes before the cascade*
 
 ### Why This Wins Alpha & Data Track
 
-**vs. "Insight value" (15 pts):** arb_revert_ratio as a leading indicator is not in any public dataset. We discovered it through 14 months of continuous measurement.
+**vs. "Insight value" (15 pts):** arb_revert_ratio as a leading indicator is not in any public dataset. We discovered it through continuous measurement since 2026-03-15.
 
-**vs. "Data source quality" (15 pts):** 6 chains, 2-second granularity, 14 months continuous. Mantle-native data included. Not scraped — directly measured RTT from DO NYC1.
+**vs. "Data source quality" (15 pts):** 6 chains, 2-second granularity, continuous since 2026-03-15. Mantle-native data included. Not scraped — directly measured RTT from DO NYC1.
 
 **vs. "Investment utility" (12 pts):** 27-second lead time before MEV peaks. May 31 case study is documented and verifiable from our public feed.
 
