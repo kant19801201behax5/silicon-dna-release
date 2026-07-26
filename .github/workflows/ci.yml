@@ -45,7 +45,10 @@ jobs:
           rustup component add rust-src --toolchain nightly
 
       - name: Vendor + patch casper-contract 5.1.1
-        run: ./prepare_patched_crate.sh
+        # Invoked through `bash` rather than `./` on purpose. The executable bit is set in git, but a
+        # clone made on Windows (or with core.fileMode=false) can land without it, and `./script` then
+        # dies with "Permission denied" / exit 126 — which is exactly how this job failed on 0057f14.
+        run: bash prepare_patched_crate.sh
         working-directory: casper-agent/oracle-contract
 
       - name: Build WASM
