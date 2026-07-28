@@ -22,7 +22,7 @@ now, not planned:
 | --- | --- | --- |
 | **Agentic AI** | A Node.js agent perceives (public feed), holds a goal (don't waste gas), decides (safe/unsafe) and acts on-chain (`update()`) every 5 min, 24/7, no human in the loop. **1,806** `update()` calls on the active contract, **14** autonomous pauses, **35.0 CSPR** of gas saved, **9,178 min** uptime with 0 restarts | `ts-agent/` + testnet explorer; `DRY_RUN=true` reproduces the decision loop locally |
 | **DeFi** | Any Casper DeFi agent can gate a transaction on `is_safe()` in one on-chain call. TypeScript SDK reads the live contract; x402 endpoint monetises the same data at $0.01/call (`HTTP 402` with a real payment challenge) | `sdk-typescript/` demo prints EXECUTE/BLOCK per transaction; `curl -i https://rtt.phoenix-ai.work/api/v1/safe` |
-| **RWA** | Regulated RWA settlement needs *both* a network-safety check and counterparty screening. Exposed as one MCP tool, `get_rwa_settlement_signal`, returning `network_safe_to_settle` plus an explicit, honest note on what the identity gate does and does not cover | `mcp-server/` — call the tool; Casper itself frames its roadmap around regulated RWAs and machine-native commerce |
+| **RWA** | Regulated RWA settlement needs *both* a network-safety check and counterparty screening. Exposed as an MCP tool (`get_rwa_settlement_signal`) **and**, as of 2026-07-29, an on-chain contract (`RwaSettlementGate`, built with Odra) any other Casper contract can call directly via `is_settlement_allowed()` | `mcp-server/` — call the tool; `rwa-settlement-gate/` — contract source; [testnet explorer](https://testnet.cspr.live/contract-package/fab9c0a11314515796efddc5f5f98e0681cbdc717a2787a75a313cb5cb42511d) |
 
 **Machine-native commerce context:** CSPR went live for trading on Kraken on **July 21, 2026**
 ([Kraken](https://blog.kraken.com/product/asset-listings/cspr-is-available-for-trading),
@@ -129,6 +129,46 @@ node index.js
 
 See [mcp-server/README.md](./mcp-server/README.md) for the Claude Desktop config and what was verified.
 
+### 4. RWA Settlement Gate (`rwa-settlement-gate/`)
+
+A second, additive contract — live on Casper Testnet since 2026-07-29, built with the
+**Odra** framework (the main oracle above deliberately uses raw WASM instead; this
+contract shows both approaches in the same repo). It turns `get_rwa_settlement_signal`
+from a read-only MCP tool into something any Casper contract can call cross-contract
+before settling an RWA transfer.
+
+```
+contract-package-fab9c0a11314515796efddc5f5f98e0681cbdc717a2787a75a313cb5cb42511d
+```
+
+```
+Entry points:
+  init()
+  publish(network_safe, identity_screening_active, timestamp) — authorized publisher only
+  is_settlement_allowed() → bool   — true only if both signals are true
+  get_network_safe() / get_identity_screening_active() / get_last_update_ts()
+```
+
+```bash
+cd rwa-settlement-gate
+cargo odra build
+ODRA_CASPER_LIVENET_NODE_ADDRESS=https://node.testnet.casper.network \
+ODRA_CASPER_LIVENET_CHAIN_NAME=casper-test \
+ODRA_CASPER_LIVENET_EVENTS_URL=https://node.testnet.casper.network/events \
+ODRA_CASPER_LIVENET_SECRET_KEY_PATH=./keys/secret_key.pem \
+  cargo run --bin rwa_settlement_gate_cli -- deploy
+```
+
+Note: point `ODRA_CASPER_LIVENET_NODE_ADDRESS` at the **official** Casper node, not
+`node.testnet.cspr.cloud` — `odra-casper-livenet-env` 2.9.0 reads `CSPR_CLOUD_AUTH_TOKEN`
+into its config but never actually attaches it to any HTTP request (confirmed against
+the pinned `release/2.9.0` source), so every CSPR.cloud call 401s. See
+[DORAHACKS_UPDATE.md](./DORAHACKS_UPDATE.md) and [CHECKLIST.md](./CHECKLIST.md) for the
+full story, including the two earlier failed deploy attempts and why.
+
+Currently holds default state — wiring the existing agent to call `publish()` on a
+cycle is the next step, not done yet.
+
 ---
 
 ## x402 Integration
@@ -149,7 +189,10 @@ Currently settled on Base mainnet. Casper's own x402 Facilitator (`x402-facilita
 ## Live Proof
 
 - Dashboard: https://phoenix-zero.vercel.app
+- Casper dashboard: https://rtt.phoenix-ai.work/casper
 - Public feed: https://rtt.phoenix-ai.work/api/public-feed
+- SequencerOracle contract: https://testnet.cspr.live/contract/hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a
+- RwaSettlementGate contract: https://testnet.cspr.live/contract-package/fab9c0a11314515796efddc5f5f98e0681cbdc717a2787a75a313cb5cb42511d
 - Demo video: https://youtu.be/o-CQfiSfQ4o (general Phoenix Zero walkthrough)
 - Demo video (Casper-specific, 52s, unnarrated screen capture): https://youtu.be/KtTrz23B92w
 - DoraHacks: https://dorahacks.io/buidl/43859
@@ -222,13 +265,17 @@ The crate puts `#[no_mangle]` on `#[panic_handler]` / `#[alloc_error_handler]`, 
 rejects as internal language items (reproduced on rustc 1.97.1, both with and without the patch).
 
 **Fix:** `prepare_patched_crate.sh` (step 3 above) fetches the crate from crates.io into `vendor/`
-and applies `patches/casper-contract-5.1.1-no_mangle.patch` — two removed attributes, nothing else;
-the patch is diffed against upstream and tracked in this repo. `[patch.crates-io]` now points at the
+and applies `patches/casper-contract-5.1.1-no_mangle-and-allocator.patch` — removes the two
+`#[no_mangle]` attributes, and (added 2026-07-28) swaps the default global allocator from the
+unmaintained `wee_alloc` (GHSA-rc23-xxgq-x27g, no fixed version exists, flagged critical by
+Dependabot) to `dlmalloc` — the same allocator Rust's own wasm32 std target uses internally. The
+patch is diffed against upstream and tracked in this repo. `[patch.crates-io]` now points at the
 relative `vendor/casper-contract`.
 
 **Verification:** clean files → `./prepare_patched_crate.sh` → the build command above → produced
-`sequencer_oracle.wasm` at **145,063 bytes**, against **145,067** for the artefact of the live
-deployed contract (the 4-byte delta is the project path length embedded in metadata). Anyone can now
+`sequencer_oracle.wasm` at **155,129 bytes**, reproduced identically twice (once incrementally, once
+from a fully clean `rm -rf vendor`) on the exact pinned toolchain (`nightly-2026-07-16`, see
+`rust-toolchain.toml`). `wee_alloc` no longer appears anywhere in `Cargo.lock`. Anyone can now
 rebuild from source and compare; the on-chain contract remains independently verifiable via the
 testnet explorer either way.
 
