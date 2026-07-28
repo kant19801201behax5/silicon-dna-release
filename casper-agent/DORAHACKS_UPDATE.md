@@ -175,6 +175,24 @@ built.
 
 ---
 
+## What's New For This Buildathon vs. What's Reused (originality note)
+
+The rules ask for code "developed specifically for the Buildathon." To be exact about what that means here, since we'd rather answer this before it's asked:
+
+**Built specifically for this Buildathon (June 1 – July 26, 2026) — 100% new:**
+- The Casper smart contract itself, both the original (June 4) and the rebuilt version (July 16, after Casper's 2.2.2 protocol upgrade broke the first one) — new Rust/WASM code, not adapted from elsewhere
+- `ts-agent/` — the autonomous agent that reads network state and calls `update()` on Casper testnet every 5 minutes, its x402 negotiation loop, its daily spending limiter, and its Silicon DNA identity check
+- The MCP server (`mcp-server/`), including the RWA-specific `get_rwa_settlement_signal` tool
+- The Casper dashboard, testing guide, and every Casper-specific integration doc in this repo
+
+**Reused as a data source (predates the Buildathon, started March 2026):**
+- Phoenix Zero's 6-chain network-probing infrastructure (the RTT/revert-ratio measurements the Casper agent reads)
+- Silicon DNA's identity/bot-detection layer
+
+Why we didn't rebuild the probing infrastructure from scratch for Casper: this buildathon's own judging criteria explicitly reward "real-world application" and "long-term impact potential" — a monitoring service written from zero in three weeks would have no track record to point to, and every number in this submission (the May 31 MEV war catch, the 206,000+ measurements) would be unverifiable marketing instead of falsifiable history. The actual Casper deliverable being judged here — the contract, the agent, the MCP tools, the integration — is fully original work built inside the buildathon window, on top of a data source that was already trustworthy before day one instead of a synthetic demo feed built for the occasion.
+
+---
+
 ## How It Works
 
 ```
