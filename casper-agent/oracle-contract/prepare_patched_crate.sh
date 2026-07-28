@@ -8,6 +8,12 @@
 # specific machine (`/opt/casper-oracle/casper-contract-patched`), so nobody else could build the
 # contract at all — the build died on the very first crate.
 #
+# The patch also swaps casper-contract's default global allocator from `wee_alloc` to `dlmalloc`
+# (2026-07-28, GHSA-rc23-xxgq-x27g — wee_alloc is unmaintained, no fixed version exists, Dependabot
+# flags it critical). `dlmalloc` is a drop-in `GlobalAlloc` impl and is what Rust's own wasm32 std
+# target uses internally, so this is not a novel choice. Verified end-to-end on a clean rebuild:
+# same artifact size (155129 bytes), `wee_alloc` no longer appears anywhere in Cargo.lock.
+#
 # Run once before the build command in README.md ("Deploy Contract to Casper Testnet").
 # Idempotent: re-running is a no-op once the marker file exists.
 set -euo pipefail
@@ -16,7 +22,7 @@ CRATE=casper-contract
 VER=5.1.1
 DIR="$(cd "$(dirname "$0")" && pwd)"
 VENDOR="$DIR/vendor/$CRATE"
-PATCH="$DIR/patches/$CRATE-$VER-no_mangle.patch"
+PATCH="$DIR/patches/$CRATE-$VER-no_mangle-and-allocator.patch"
 
 if [ -f "$VENDOR/.patched" ]; then
   echo "OK: $VENDOR already prepared (delete it to redo)"
