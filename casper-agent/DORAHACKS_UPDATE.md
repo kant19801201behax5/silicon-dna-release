@@ -251,6 +251,8 @@ is the next step, not yet done.
 - **Identity layer:** Silicon DNA v5.0 — 12-layer detection, ML-KEM-768 PQC
 - **Payments:** x402 protocol, currently via Base mainnet. Casper's x402 Facilitator launched natively on June 4, 2026 (supports testnet, `x402-facilitator.cspr.cloud`) — migration planned, requires a CSPR.cloud access token
 - **MCP:** a Model Context Protocol server (`casper-agent/mcp-server/`) exposes the same safety data as MCP tools for any MCP-compatible agent — part of Casper's own promoted AI toolkit. Includes an RWA-specific tool (`get_rwa_settlement_signal`) combining network safety with identity-screening context
+- **CSPR.cloud:** used directly to deploy and interact with the RWA Settlement Gate contract (`ODRA_CASPER_LIVENET_*` config, see above)
+- **CSPR.click — deliberately not used, and why:** we checked its own SDK reference (24 methods: `init`, `connect`, `signIn`, `getActiveAccount`, `sign`, …) before deciding. Every method requires a connected browser wallet extension or CSPR.click's own UI — there is no headless/server-side call path. Our agent is an unattended, 24/7 server process with its own local key file, not a browser dApp with a human clicking "connect wallet." Wiring CSPR.click in anyway would mean either faking the integration or bolting on a headless-browser wallet-automation layer solely to check a box — both worse than being direct about a real architectural mismatch. `getCsprCloudProxy()` looked like a possible server-side path, but it's documented as part of the same wallet-connected SDK instance, not an independent client.
 - **Tests:** 280/280 Silicon DNA · 21/21 agent tests — 100%
 
 ---

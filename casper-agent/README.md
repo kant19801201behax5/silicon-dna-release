@@ -169,6 +169,20 @@ full story, including the two earlier failed deploy attempts and why.
 Currently holds default state — wiring the existing agent to call `publish()` on a
 cycle is the next step, not done yet.
 
+### On CSPR.click — checked, deliberately not used
+
+Of the five components in Casper's promoted AI toolkit (x402, MCP servers, CSPR.click
+Agent Skill, CSPR.cloud API, Odra), this repo genuinely uses four: **x402** (payment
+gateway), **MCP** (`mcp-server/`), **CSPR.cloud** (deploys `rwa-settlement-gate/`), and
+**Odra** (`rwa-settlement-gate/`). CSPR.click is the exception, and it's a deliberate
+one: its own SDK reference lists 24 methods (`init`, `connect`, `signIn`,
+`getActiveAccount`, `sign`, …), and every one of them requires a connected browser
+wallet extension or CSPR.click's own UI — there is no headless/server-side call path.
+This project's agent is an unattended, 24/7 server process signing with its own local
+key file, not a browser dApp with a human clicking "connect wallet." Faking that
+integration, or bolting on a headless-browser wallet-automation layer solely to check
+a box, seemed worse than being direct about a real architectural mismatch.
+
 ---
 
 ## x402 Integration
