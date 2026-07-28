@@ -210,9 +210,42 @@ Any Casper DeFi Agent:
 
 ---
 
+## RWA Settlement Gate — a second, Odra-built contract (live on testnet)
+
+A separate, additive contract — deployed 2026-07-29, does not touch or replace the
+SequencerOracle above. This is the on-chain version of `get_rwa_settlement_signal`:
+instead of an off-chain MCP tool an agent reads, it's a contract any other Casper
+contract can call cross-contract before settling an RWA transfer.
+
+```
+contract-package-fab9c0a11314515796efddc5f5f98e0681cbdc717a2787a75a313cb5cb42511d
+```
+Deploy transaction: `6dc5440f5516b9084700bfaa5fe7d63715a068c16dfcba3281994272a77b2a47`
+Explorer: https://testnet.cspr.live/contract-package/fab9c0a11314515796efddc5f5f98e0681cbdc717a2787a75a313cb5cb42511d
+
+Entry points: `init()` · `publish(network_safe, identity_screening_active, timestamp)`
+(authorized publisher only) · `is_settlement_allowed() → bool` · `get_network_safe()` ·
+`get_identity_screening_active()` · `get_last_update_ts()`
+
+Built with the **Odra framework** (not raw WASM like the oracle above — a deliberate
+second choice, to show both approaches: raw WASM for a simple 3-entry-point oracle
+where storage-layout control mattered, Odra for this gate where the framework's
+schema/entry-point generation and `odra-cli` deploy tooling saved real time). Deployed
+via `cargo odra build` + the generated `odra-cli` binary against the official Casper
+testnet node — not yet wired to CSPR.cloud specifically, since `odra-casper-livenet-env`
+2.9.0 doesn't send the `CSPR_CLOUD_AUTH_TOKEN` header on any request (verified against
+the pinned source; a real upstream regression, tracked nowhere publicly as of this
+writing). Source: `casper-agent/rwa-settlement-gate/`.
+
+Currently holds default state (`false`/`false`/`0`) — wiring the existing agent to
+call `publish()` on a cycle, the same way it already calls the oracle's `update()`,
+is the next step, not yet done.
+
+---
+
 ## Technical Stack
 
-- **Smart contract:** Casper 2.0 (casper-contract 5.1.1, Rust/WASM — native, no Odra abstraction)
+- **Smart contract:** Casper 2.0 (casper-contract 5.1.1, Rust/WASM — native, no Odra abstraction) for the oracle; a second contract (RWA Settlement Gate, above) uses the **Odra framework** directly
 - **Agent:** Autonomous Node.js agent, calls `update()` every 5 minutes (when safe=true)
 - **Oracle backend:** Python 3.10, FastAPI, WebSocket broadcaster
 - **Identity layer:** Silicon DNA v5.0 — 12-layer detection, ML-KEM-768 PQC
@@ -283,7 +316,7 @@ with value.
 - Migrate `/api/v1/safe` payments from Base mainnet to native Casper x402 (Manifest initiative #8)
 - Expand the set of monitored sequencer chains beyond the current 6, as Casper DeFi agents request it
 - Consider Odra for new, more complex contracts (the current oracle deliberately stays on plain WASM — see above)
-- Extend `get_rwa_settlement_signal` from a read-only informational tool into an actual settlement gate an RWA contract can call on-chain, following the same pattern as `is_safe()` — this is a real next step, not a claim we've already built it
+- ✅ Done (2026-07-29): `get_rwa_settlement_signal` now also exists as an on-chain settlement gate (`RwaSettlementGate`, Odra, see above) any RWA contract can call directly — not just an off-chain MCP tool. Next: wire the existing agent to call its `publish()` on a cycle, same pattern as the oracle's `update()`
 
 **Beyond that:** the oracle is designed as reusable infrastructure — not just for our own agent, but as a public safety service for any agent on Casper willing to pay $0.01 for a pre-transaction check.
 
