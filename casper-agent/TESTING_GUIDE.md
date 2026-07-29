@@ -51,6 +51,28 @@ View any TX: `https://testnet.cspr.live/deploy/<TX_HASH>`
 
 ---
 
+## 3b. Verify the RWA Settlement Gate (second contract, Odra)
+
+A separate, additive contract — does not touch the oracle above. Deployed 2026-07-29.
+
+**Contract package:**
+```
+contract-package-fab9c0a11314515796efddc5f5f98e0681cbdc717a2787a75a313cb5cb42511d
+```
+
+**View on explorer:**
+https://testnet.cspr.live/contract-package/fab9c0a11314515796efddc5f5f98e0681cbdc717a2787a75a313cb5cb42511d
+
+**Deploy transaction:** `6dc5440f5516b9084700bfaa5fe7d63715a068c16dfcba3281994272a77b2a47`
+View: `https://testnet.cspr.live/transaction/6dc5440f5516b9084700bfaa5fe7d63715a068c16dfcba3281994272a77b2a47`
+
+You will see entry points: `init`, `publish`, `is_settlement_allowed`, `get_network_safe`,
+`get_identity_screening_active`, `get_last_update_ts`. Source and full build/deploy recipe:
+`rwa-settlement-gate/` — see the main [README.md](./README.md) (note: this contract needs
+`cargo-odra` + a current `binaryen`, a different toolchain from the raw-WASM oracle above).
+
+---
+
 ## 4. Read Live Oracle State via Public API
 
 The oracle's source data is publicly readable — no key required:
@@ -144,14 +166,40 @@ During the **May 31, 2026 MEV war**: `arb_revert_ratio` reached `0.721` → `saf
 
 ---
 
+## 9. Run the MCP Server (4 tools, incl. RWA + LLM)
+
+```bash
+cd casper-agent/mcp-server
+npm install
+node index.js
+```
+
+Speaks MCP over stdio — hangs waiting for a client, that's normal. Point Claude Desktop or
+any MCP client at it (see [mcp-server/README.md](./mcp-server/README.md) for the config).
+Four tools:
+
+| Tool | Needs a key? |
+|---|---|
+| `get_sequencer_safety` | No |
+| `get_oracle_state` | No |
+| `get_rwa_settlement_signal` | No — includes the calibrated Casper P99 threshold and live Kraken CSPR/USD liquidity, both free public APIs |
+| `explain_settlement_decision` | Optional — needs `OPENROUTER_API_KEY` (free key at openrouter.ai/keys) for the LLM explanation; returns `available: false` cleanly without one, everything else still works |
+
+mcp-server/README.md has real, live sample output for all four, including exact numbers from
+the actual verification runs.
+
+---
+
 ## Summary
 
 | What to check | Where |
 |---|---|
-| Active contract | testnet.cspr.live/contract/hash-2a7ebbc9... |
+| Active contract (oracle) | testnet.cspr.live/contract/hash-2a7ebbc9... |
 | Original contract (962 historical tx) | testnet.cspr.live/contract/hash-5e45d42c... |
+| RWA Settlement Gate (2nd contract, Odra) | testnet.cspr.live/contract-package/fab9c0a1... |
 | Agent wallet | testnet.cspr.live/account/020249... |
 | Live data | rtt.phoenix-ai.work/api/public-feed |
 | Dashboard | rtt.phoenix-ai.work/casper |
+| MCP server (4 tools) | `casper-agent/mcp-server/` |
 | Demo video (general) | https://youtu.be/o-CQfiSfQ4o |
 | Demo video (Casper-specific, 52s) | https://youtu.be/KtTrz23B92w |
