@@ -186,12 +186,19 @@ go-to-market, not existing paying customers.
 https://github.com/kant19801201behax5/silicon-dna-release
 
 ```
-/                      — Silicon DNA core (probe-worker.mjs)
-/src/                  — Architecture documentation (readable)
+/server.ts             — Core Silicon DNA server, the real deployed implementation
+/                      — probe-worker.mjs, package.json, tsconfig.json (root project)
+/src/                  — services/middleware/db/utils (real source, not just docs)
+                          + architecture write-ups (SILICON_DNA_LAYERS.md, CAUSAL_ENGINE.md)
 /mantle-agent/         — Mantle Sepolia contract + pusher
 /casper-agent/         — Casper Agentic Buildathon integration
 /dist/                 — Live dashboard (React)
 ```
+
+*Corrected 2026-07-29: `/src/` used to say "Architecture documentation (readable)" — until today
+that's all it was, because `server.ts` and every file it imports from `src/services/` etc. lived
+only in a separate private repo, so the layer docs cited line numbers no one outside the team
+could open. Published the real files here the same day so those citations resolve for anyone.*
 
 ---
 
