@@ -211,8 +211,10 @@ full story, including the two earlier failed deploy attempts and why.
 `bin/cli.rs` requests 500 CSPR gas — 200 CSPR genuinely ran out of gas on the first
 real attempt (documented in CHECKLIST.md), so don't lower this without re-testing.
 
-Currently holds default state — wiring the existing agent to call `publish()` on a
-cycle is the next step, not done yet.
+Wired (2026-07-30): `ts-agent/publish_gate.js` calls `publish()` every 15 min (cron,
+separate from the oracle's `update()` loop). First on-chain publish verified — deploy
+`5e5a89bc…` executed Success, `is_settlement_allowed()` now returns true — so the gate
+holds live state, not default.
 
 ### On CSPR.click — checked, deliberately not used
 

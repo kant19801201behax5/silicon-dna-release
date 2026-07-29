@@ -262,9 +262,13 @@ testnet node — not yet wired to CSPR.cloud specifically, since `odra-casper-li
 the pinned source; a real upstream regression, tracked nowhere publicly as of this
 writing). Source: `casper-agent/rwa-settlement-gate/`.
 
-Currently holds default state (`false`/`false`/`0`) — wiring the existing agent to
-call `publish()` on a cycle, the same way it already calls the oracle's `update()`,
-is the next step, not yet done.
+Wired as of 2026-07-30: `ts-agent/publish_gate.js` calls `publish()` on a cycle
+(every 15 min via cron, independent of the oracle's `update()` loop), the same way
+the agent already calls the oracle. First on-chain publish verified — deploy
+`5e5a89bc894de0ffed286b4e9c6ba7a4aa90bdc1d39feb4e65a288471f59d111` executed Success
+(effects write to the gate package), setting `network_safe=true`,
+`identity_screening_active=true` → `is_settlement_allowed()` now returns true, so the
+gate no longer holds default state.
 
 ---
 
