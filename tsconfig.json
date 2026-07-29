@@ -28,6 +28,8 @@
     "dist",
     "tests",
     "vitest.config.ts",
-    "tsconfig.test.json"
+    "tsconfig.test.json",
+    "casper-agent",
+    "mantle-agent"
   ]
 }
