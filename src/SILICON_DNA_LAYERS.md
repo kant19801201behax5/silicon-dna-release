@@ -183,8 +183,8 @@ gates /api/enclave specifically
     independent of every other gate in this file. Low trustScore forces an
     extra Argon2 PoW challenge (403 ACTIVE_INTERROGATION_REQUIRED) before
     the request is served.
-    Verified: imported at server.ts:14-15, routes at server.ts:487-500,
-    enforcement at server.ts:503-545. Client side calls confirmed live in
+    Verified: imported at server.ts:14-15, routes at server.ts:510-523,
+    enforcement at server.ts:526-568. Client side calls confirmed live in
     the shipped dashboard bundle (dist/assets/index-SaaJg3ZO.js).
     Caveat: the client-side worker (src/services/rhythmWorker.ts) also
     computes a "software PUF" RAM-latency fingerprint (ramDna) and sends it
@@ -202,7 +202,7 @@ L11
     LEGIT_AGENT / MALICIOUS_BOT labels the original (fictional) L11
     described, via a real, different, additive formula — not a trained
     model, not the weighted-average originally claimed.
-    Verified: imported at server.ts:20, route at server.ts:933-939.
+    Verified: imported at server.ts:20, route at server.ts:972-984.
 
 RPC Shadow Filter — code is real, but the middleware itself is NOT mounted;
 this one genuinely is dead as pitched
@@ -211,7 +211,7 @@ this one genuinely is dead as pitched
     through immediately, classify in the background via classifyAgent(),
     throttle (429) an IP after 5 consecutive MALICIOUS_BOT hits in a
     1-minute window. `GET /api/shadow-stats` is a live endpoint
-    (server.ts:948-950) and `getShadowStats`/`clearShadowRecords` are
+    (server.ts:987-989) and `getShadowStats`/`clearShadowRecords` are
     imported (server.ts:21) — but `shadowFilterMiddleware`, the only
     function that ever writes to `shadowRecords`, is never imported or
     passed to `app.use` anywhere in the codebase (grepped the whole repo,
@@ -225,9 +225,9 @@ Wallet Identity Binding — REAL, wired
     HMAC-derived behavioral fingerprint (entropy/variance/Spearman-ρ,
     keyed by the session secret — raw values never stored). 3+ distinct
     wallets sharing one behavioral hash flags as a Sybil group.
-    Verified: imported at server.ts:22, routes at server.ts:551 (legacy
-    /api/wallet stub), 962 (/api/wallet/bind), 997 (/api/wallet/lookup),
-    1009 (/api/wallet/stats), 1013 (localhost-only admin clear).
+    Verified: imported at server.ts:23, routes at server.ts:574 (legacy
+    /api/wallet stub), 1001 (/api/wallet/bind), 1036 (/api/wallet/lookup),
+    1048 (/api/wallet/stats), 1052 (localhost-only admin clear).
 ```
 
 ## Cross-IP Sybil Clustering (separate service, not one of the numbered layers)
