@@ -26,10 +26,18 @@ L1.2 automation/WebDriver detection) — plus a new localhost-only endpoint,
 `GET /api/check-ip`, letting other local services (the x402 gateway) query
 Silicon DNA's ban list without duplicating logic. Root cause, again: checked
 the local repo as if it were authoritative without diffing it against what's
-actually deployed. No SVM, composite score, or causal-engine content turned up
-anywhere in this pass either — searched the full deployed tree, its tests, and
-even the separate obfuscated `release/server.js` build artifact (confirmed not
-running; the live process executes `server.ts` directly via `tsx`).*
+actually deployed. Re-searched the full deployed tree, its tests, and the
+separate obfuscated `release/server.js` build artifact (confirmed not running;
+the live process executes `server.ts` directly via `tsx`) for the originally-
+disputed claims specifically: no `scikit-learn`-style trained one-class SVM
+file/import anywhere, and no single formula combining L0-L10 into one number
+with the old >0.70/>0.45 cutoffs. That's what's absent — not "no composite
+scoring exists anywhere," which would be wrong. Composite/multi-signal scoring
+is real in three separate, different forms: the 3-class classifier below
+(additive scoring across 6 signals), Golden Seal's Gaussian-decayed
+`trustScore`, and JARVIS's causal R²/ATE engine (separate system, see
+`src/CAUSAL_ENGINE.md`). Three real mechanisms instead of the one originally
+claimed, not zero.*
 
 ## Purpose
 
@@ -130,11 +138,16 @@ L9  Network Telemetry Gate — REAL, but this is a separate MCP tool's threshold
     `get_rwa_settlement_signal` and the paid x402 endpoint; it does not feed
     into `bannedIPs` and is unrelated to L0-L8's per-IP bot/human decision.
 
-L10 (Removed — was never implemented) An earlier version of this doc described
-    a "Causal Engine Integration" layer reading R² and best_var from a causal
-    regression model. That model exists inside JARVIS, a separate system, and
-    is not read by, or wired into, Silicon DNA's own `server.ts` ban logic.
-    Removed from this list rather than left as an inaccurate claim.
+L10 (Removed as a layer of THIS system — but real and live elsewhere) An
+    earlier version of this doc described a "Causal Engine Integration" layer
+    reading R² and best_var from a causal regression model. That model is
+    real and live — confirmed R²=0.9983 querying JARVIS's `/api/signal`
+    directly — but it's inside JARVIS, a separate trading agent. The
+    relationship runs the other way: Silicon DNA's own trust output is a
+    live input INTO that engine (`silicon_dna:{trust,fresh}` in the same
+    response), not the reverse. It is not read by, or wired into, Silicon
+    DNA's own `server.ts` ban logic. Full detail: `src/CAUSAL_ENGINE.md`.
+    Removed as a numbered layer of this cascade, not removed as "doesn't exist."
 
 L11 (Removed as originally described — but a different real classifier exists,
     see below) An earlier version of this doc described a weighted-average
@@ -225,17 +238,21 @@ threshold 0.15. Runs alongside the layer cascade above as its own service.
 
 ## Why the real (corrected) picture still holds up
 
-Even without an ML model or a single composite score, defeating this system
-requires simultaneously: real hardware-level timing noise (L0), a real
-post-quantum KEM handshake (L1), a consistent and non-automated
-User-Agent/platform/header profile (L3), a genuine memory-hard PoW solve within
-plausible wall-clock time (L4), human-like (not too regular, not too random)
-request timing (L7/L8), and — for `/api/enclave` specifically — a correctly
-sequenced, replay-protected, HMAC-signed entropy seal plus a Gaussian-scored
-timing-rhythm trust score (Golden Seal). That's a materially harder bar than a
-single learned threshold, even though no individual piece of it is a trained
-model — the interpretability is the point, not a limitation being apologized
-for.
+Even without a trained one-class-SVM model or a single L0-L10 weighted-average
+formula, defeating this system requires simultaneously: real hardware-level
+timing noise (L0), a real post-quantum KEM handshake (L1), a consistent and
+non-automated User-Agent/platform/header/WebDriver profile (L3, L1.1, L1.2), a
+genuine memory-hard PoW solve within plausible wall-clock time (L4), human-like
+(not too regular, not too random) request timing (L7/L8), and — for
+`/api/enclave` specifically — a correctly sequenced, replay-protected,
+HMAC-signed entropy seal plus a Gaussian-scored timing-rhythm trust score
+(Golden Seal) that IS a real composite score, just not the one originally
+described. Add the 3-class classifier's own 6-signal additive score on top.
+That's a materially harder bar than a single learned threshold, and — contrary
+to how an earlier pass here phrased it — it isn't "no composite scoring
+anywhere," it's several real composite mechanisms instead of the one originally
+claimed. The interpretability of each individual piece is the point, not a
+limitation being apologized for.
 
 One correction is owed the other direction too: not everything wired into the
 codebase is doing something. The RPC Shadow Filter above is real code with a
