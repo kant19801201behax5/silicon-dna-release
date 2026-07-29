@@ -5,7 +5,7 @@
 | Requirement | Status | Notes |
 |-------------|--------|-------|
 | Working prototype on Casper Testnet | ✅ DONE | Active contract: hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a |
-| Blockchain transactions generated | ✅ DONE | 962 confirmed `update()` calls on the original contract (June 3 – July 6) **plus 1,806 on the active contract** as of 2026-07-25 01:18 UTC — agent up 9,178 min continuously, 0 restarts (figure re-verified from live logs 2026-07-25; the old note said only "ongoing", which undersold it) |
+| Blockchain transactions generated | ✅ DONE | 962 confirmed `update()` calls on the original contract (June 3 – July 6) **plus 2,937 on the active contract** as of 2026-07-29 00:45 UTC — agent up 14,905 min continuously, 0 restarts (figure re-verified from live logs 2026-07-29; the old note said only "ongoing", which undersold it) |
 | Open source GitHub repo | ✅ DONE | https://github.com/kant19801201behax5/silicon-dna-release |
 | README with documentation | ✅ DONE | README.md complete with architecture + setup |
 | Demo video | ✅ DONE | https://youtu.be/o-CQfiSfQ4o (general Phoenix Zero walkthrough) — Casper-specific 52s clip: https://youtu.be/KtTrz23B92w |
@@ -17,9 +17,9 @@
 | Active contract hash | hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a |
 | Active contract deployed | July 16, 2026 |
 | Original contract hash | hash-5e45d42c52872f66c47e73cdf24b0ced852f9d929834e55ea6b6fa8872d8354d (June 3 – July 6, 2026) |
-| Total on-chain updates | 962 (original) + **1,806** (active, as of 2026-07-25 01:18 UTC) = **2,768** |
-| Agent uptime | **9,178 min** continuous (since 2026-07-18 16:20 UTC), **0 restarts** |
-| Safety gate blocks | 3,254 on the original contract's period (Jun 3–Jul 6) — historical. ✅ **Correction 2026-07-25:** the earlier note claimed "no live counter for this exists in the current deployed `agent.js`". That was wrong — the agent prints `paused=` in its Summary line every 5 min. Current active-contract value: **paused=14**, alongside **gas_saved=35.0 CSPR**. Both are re-derivable from live logs at any time. |
+| Total on-chain updates | 962 (original) + **2,937** (active, as of 2026-07-29 00:45 UTC) = **3,899** |
+| Agent uptime | **14,905 min** continuous (since 2026-07-18 16:20 UTC), **0 restarts** |
+| Safety gate blocks | 3,254 on the original contract's period (Jun 3–Jul 6) — historical. ✅ **Correction 2026-07-25:** the earlier note claimed "no live counter for this exists in the current deployed `agent.js`". That was wrong — the agent prints `paused=` in its Summary line every 5 min. Current active-contract value: **paused=23**, alongside **gas_saved=57.5 CSPR**. Both are re-derivable from live logs at any time. |
 | Wallet | 0202494268f650725fb759e6b89bde9a44300a89a02b7d72477eff8894c857c5defb |
 | Explorer | https://testnet.cspr.live |
 | Dashboard | https://phoenix-zero.vercel.app |

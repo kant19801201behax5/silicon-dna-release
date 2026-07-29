@@ -18,7 +18,7 @@ Autonomous DeFi agents face two critical shortcomings:
 No marketing. No voiceover. Raw screen recording from a working production system.
 
 - [0:00–0:22] Live agent logs: network safe → arb_revert spikes to 16% → agent instantly pauses (🚨 UNSAFE — pausing) → resumes after conditions clear.
-- [0:22–0:40] Casper Testnet Explorer: 962 confirmed `oracle.update()` transactions on the original contract (the active contract has since added 1,806 more — 2,768 total as of 2026-07-25). Contract in Rust (casper-contract 5.1.1, native WASM — no Odra abstraction layer).
+- [0:22–0:40] Casper Testnet Explorer: 962 confirmed `oracle.update()` transactions on the original contract (the active contract has since added 2,937 more — 3,899 total as of 2026-07-29). Contract in Rust (casper-contract 5.1.1, native WASM — no Odra abstraction layer).
 - [0:40–0:52] Raw `/api/public-feed` JSON: live `arb_revert`, `base_p99`, `gas_pressure` — the exact payload DeFi agents pay for via x402.
 
 ---
@@ -119,9 +119,9 @@ Entry points:
 June 3 – July 6, 2026 (original contract): **962 transactions** (verifiable on the explorer) ·
 **3,254 autonomous safety decisions** (historical count from that period's logs).
 
-**Active contract, re-verified from live logs 2026-07-25 01:18 UTC:** **1,806** `update()` calls,
-**14** safety pauses, **35.0 CSPR** of gas saved by not transacting while unsafe — agent up
-**9,178 min** continuously with **0 restarts**. Running total across both contracts: **2,768** updates.
+**Active contract, re-verified from live logs 2026-07-29 00:45 UTC:** **2,937** `update()` calls,
+**23** safety pauses, **57.5 CSPR** of gas saved by not transacting while unsafe — agent up
+**14,905 min** continuously with **0 restarts**. Running total across both contracts: **3,899** updates.
 
 *Correction (2026-07-25):* the line above previously claimed the current `agent.js` "has no separate
 counter for this metric, so it can't be re-derived". That was wrong — the agent prints
@@ -264,13 +264,13 @@ is the next step, not yet done.
 
 ## Production Proof
 
-- **Live since:** March 15, 2026 (132 days of continuous collection as of 2026-07-25)
+- **Live since:** March 15, 2026 (136 days of continuous collection as of 2026-07-29)
 - **Data:** ~258,700 measurements/day across 6 chains, measured off the live feed 2026-07-25
   (150,620 chain-metric records in a 13.97 h window). The May 31 study used a 206,040-record feed
   snapshot; the raw feed is rotated, so a lifetime cumulative total is not independently verifiable
-  — the per-day rate is
+  — the per-day rate above is what's reproducible right now via `curl` on the public feed
 - **On-chain (original contract, June 3 – July 6):** 962 confirmed updates (verifiable) · 3,254 autonomous safety blocks (historical count from that period)
-- **On-chain (active contract, as of 2026-07-25 01:18 UTC):** **1,806** confirmed updates · **14** safety pauses · **35.0 CSPR** gas saved · **9,178 min** uptime, 0 restarts — all re-derived from live logs
+- **On-chain (active contract, as of 2026-07-29 00:45 UTC):** **2,937** confirmed updates · **23** safety pauses · **57.5 CSPR** gas saved · **14,905 min** uptime, 0 restarts — all re-derived from live logs
 - **On-chain (active contract, since July 16):** live updates every 5 minutes — see explorer above
 - **Casper dashboard:** https://rtt.phoenix-ai.work/casper
 - **Main dashboard:** https://phoenix-zero.vercel.app
@@ -288,7 +288,7 @@ today, not a promise.
 | --- | --- |
 | **Technical execution** — code quality, architecture, completeness | 4-layer stack, each independently runnable: Rust/WASM contract (3 entry points), Node.js agent, TypeScript SDK, MCP server. Agent test suite **21/21**. CI builds the contract from a clean clone, typechecks the SDK and exercises the MCP handshake on every push |
 | **Innovation and originality** | The signal itself: L2 sequencer *revert ratio* as a leading indicator of cross-chain stress. Not published in any public dataset — measured directly, and documented against raw feed data in [`../proof/mev_war_2026-05-31.md`](../proof/mev_war_2026-05-31.md) (72.1% MEV war, 3-minute lead) |
-| **Use of AI / agentic systems** | Full perceive → goal → decide → act loop with no human in any cycle: reads the feed, holds the goal "don't waste gas", decides safe/unsafe, calls `update()` on-chain. **1,806** autonomous calls, **14** self-initiated pauses, **35.0 CSPR** saved, **9,178 min** uptime, 0 restarts. The on-chain safety decision stays deterministic threshold logic, deliberately (interpretable/auditable, not a black box — see below). A real LLM sits one layer up instead: `explain_settlement_decision` (MCP, added 2026-07-29) sends the live signals to `openai/gpt-4o-mini` via OpenRouter and returns a plain-language risk explanation — verified live, real token cost ($0.00005565/call), kept out of the safety-critical path on purpose so it can never affect the actual verdict. Uses **four of five** components of the Casper AI Toolkit directly — **x402**, **MCP**, **CSPR.cloud** (deploys the RWA gate), **Odra**. The fifth, CSPR.click, was checked and deliberately not used — its SDK is browser-wallet-only, no headless path exists for an unattended server agent (see README) |
+| **Use of AI / agentic systems** | Full perceive → goal → decide → act loop with no human in any cycle: reads the feed, holds the goal "don't waste gas", decides safe/unsafe, calls `update()` on-chain. **2,937** autonomous calls, **23** self-initiated pauses, **57.5 CSPR** saved, **14,905 min** uptime, 0 restarts. The on-chain safety decision stays deterministic threshold logic, deliberately (interpretable/auditable, not a black box — see below). A real LLM sits one layer up instead: `explain_settlement_decision` (MCP, added 2026-07-29) sends the live signals to `openai/gpt-4o-mini` via OpenRouter and returns a plain-language risk explanation — verified live, real token cost ($0.00005565/call), kept out of the safety-critical path on purpose so it can never affect the actual verdict. Uses **four of five** components of the Casper AI Toolkit directly — **x402**, **MCP**, **CSPR.cloud** (deploys the RWA gate), **Odra**. The fifth, CSPR.click, was checked and deliberately not used — its SDK is browser-wallet-only, no headless path exists for an unattended server agent (see README) |
 | **Real-world application (DeFi / RWA)** | DeFi: one-call `is_safe()` gate any Casper protocol can require before transacting. RWA: `get_rwa_settlement_signal` MCP tool combining a calibrated Casper-native safety threshold, live Kraken CSPR/USD liquidity, and counterparty screening into one `ready_to_settle` verdict — plus, as of 2026-07-29, the same logic as an on-chain gate (`RwaSettlementGate`, live on testnet) any Casper contract can call directly. Reused outside this hackathon already (Tenderly circuit-breaker, separate public repo) |
 | **User experience and design** | Live dashboard at [rtt.phoenix-ai.work/casper](https://rtt.phoenix-ai.work/casper) and [phoenix-zero.vercel.app](https://phoenix-zero.vercel.app); zero-setup verification via `curl` on the public feed; a step-by-step [TESTING_GUIDE.md](./TESTING_GUIDE.md) written for a judge with no prior context |
 | **Smart-contract work** | Two live Casper Testnet contracts: `SequencerOracle` (`hash-2a7ebbc9…261f3a`, raw WASM, entry points `update`/`is_safe`/`get_state`, receiving transactions right now — redeployed once to fix a real `EntryPointType` bug after a network protocol upgrade, documented rather than hidden) and `RwaSettlementGate` (`contract-package-fab9c0a1…b42511d`, built with Odra, deployed 2026-07-29) |

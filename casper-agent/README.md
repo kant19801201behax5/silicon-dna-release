@@ -20,7 +20,7 @@ now, not planned:
 
 | Focus area | What is actually running | How to check it yourself |
 | --- | --- | --- |
-| **Agentic AI** | A Node.js agent perceives (public feed), holds a goal (don't waste gas), decides (safe/unsafe) and acts on-chain (`update()`) every 5 min, 24/7, no human in the loop. **1,806** `update()` calls on the active contract, **14** autonomous pauses, **35.0 CSPR** of gas saved, **9,178 min** uptime with 0 restarts | `ts-agent/` + testnet explorer; `DRY_RUN=true` reproduces the decision loop locally |
+| **Agentic AI** | A Node.js agent perceives (public feed), holds a goal (don't waste gas), decides (safe/unsafe) and acts on-chain (`update()`) every 5 min, 24/7, no human in the loop. **2,937** `update()` calls on the active contract, **23** autonomous pauses, **57.5 CSPR** of gas saved, **14,905 min** uptime with 0 restarts | `ts-agent/` + testnet explorer; `DRY_RUN=true` reproduces the decision loop locally |
 | **DeFi** | Any Casper DeFi agent can gate a transaction on `is_safe()` in one on-chain call. TypeScript SDK reads the live contract; x402 endpoint monetises the same data at $0.01/call (`HTTP 402` with a real payment challenge) | `sdk-typescript/` demo prints EXECUTE/BLOCK per transaction; `curl -i https://rtt.phoenix-ai.work/api/v1/safe` |
 | **RWA** | Regulated RWA settlement needs a network-safety check, real market liquidity, and counterparty screening. `get_rwa_settlement_signal` (MCP tool) combines all three — network safety now includes a calibrated Casper-native P99 threshold, plus live CSPR/USD liquidity read from Kraken's public API — into one `ready_to_settle` verdict. As of 2026-07-29 the same logic also exists as an on-chain contract (`RwaSettlementGate`, built with Odra) any other Casper contract can call directly via `is_settlement_allowed()` | `mcp-server/` — call the tool; `rwa-settlement-gate/` — contract source; [testnet explorer](https://testnet.cspr.live/contract-package/fab9c0a11314515796efddc5f5f98e0681cbdc717a2787a75a313cb5cb42511d) |
 
@@ -149,9 +149,50 @@ Entry points:
   get_network_safe() / get_identity_screening_active() / get_last_update_ts()
 ```
 
+**Prerequisites (one-time, not needed for the raw-WASM oracle above — Odra's own
+toolchain, separate from steps 1-4 in "Deploy Contract to Casper Testnet" below):**
+
+```bash
+# System packages cargo-odra needs to build (Debian/Ubuntu) — without these,
+# `cargo install cargo-odra` fails with an openssl-sys/pkg-config error.
+sudo apt-get install -y pkg-config libssl-dev
+
+# cargo-odra itself
+cargo install cargo-odra --locked
+
+# wasm32 target for whatever toolchain cargo-odra invokes
+rustup target add wasm32-unknown-unknown
+
+# wasm-strip — apt's binaryen package normally has this too, fine as-is
+which wasm-strip || sudo apt-get install -y wabt
+```
+
+**The one prerequisite that actually blocks a build, twice-confirmed:** apt's
+`binaryen` package (`wasm-opt`) is commonly too old — v105 does not recognize the
+`--signext-lowering` flag `cargo odra build`'s optimization step passes it, and the
+build fails with `Unknown option '--signext-lowering'` / `Wasm preprocessing error:
+... Bulk memory operations are not supported` if you skip optimization and deploy
+anyway (confirmed: costs real gas, the transaction fails on-chain). Fetch a current
+release directly instead of relying on apt:
+
+```bash
+curl -sSfL -A "rwa-gate-build" \
+  "https://github.com/WebAssembly/binaryen/releases/download/version_128/binaryen-version_128-x86_64-linux.tar.gz" \
+  -o /tmp/binaryen.tar.gz
+tar -xzf /tmp/binaryen.tar.gz -C /tmp
+export PATH="/tmp/binaryen-version_128/bin:$PATH"   # must come before system wasm-opt in PATH
+```
+
+**Build and deploy:**
+
 ```bash
 cd rwa-settlement-gate
 cargo odra build
+# Expected: wasm/RwaSettlementGate.wasm, ~148 KB. Sanity check before spending any gas:
+#   wasm-objdump -x wasm/RwaSettlementGate.wasm | grep '"call"'   # must show the call() export
+#   wasm2wat wasm/RwaSettlementGate.wasm -o /tmp/check.wat && \
+#     grep -c 'memory.copy\|memory.fill' /tmp/check.wat            # must be 0
+
 ODRA_CASPER_LIVENET_NODE_ADDRESS=https://node.testnet.casper.network \
 ODRA_CASPER_LIVENET_CHAIN_NAME=casper-test \
 ODRA_CASPER_LIVENET_EVENTS_URL=https://node.testnet.casper.network/events \
@@ -165,6 +206,10 @@ into its config but never actually attaches it to any HTTP request (confirmed ag
 the pinned `release/2.9.0` source), so every CSPR.cloud call 401s. See
 [DORAHACKS_UPDATE.md](./DORAHACKS_UPDATE.md) and [CHECKLIST.md](./CHECKLIST.md) for the
 full story, including the two earlier failed deploy attempts and why.
+
+**Also check `ODRA_CASPER_LIVENET_TTL` / gas limit if redeploying:** the shipped
+`bin/cli.rs` requests 500 CSPR gas — 200 CSPR genuinely ran out of gas on the first
+real attempt (documented in CHECKLIST.md), so don't lower this without re-testing.
 
 Currently holds default state — wiring the existing agent to call `publish()` on a
 cycle is the next step, not done yet.
