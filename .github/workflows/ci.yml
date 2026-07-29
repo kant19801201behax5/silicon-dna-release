@@ -68,6 +68,45 @@ jobs:
           test "$SIZE" -gt 100000 || { echo "ERROR: artefact suspiciously small"; exit 1; }
         working-directory: casper-agent/oracle-contract
 
+  # Added 2026-07-29, same day server.ts was first published here (it used to live only in a
+  # separate private repo — SILICON_DNA_LAYERS.md cited its line numbers but no judge could open
+  # it). Publishing it isn't enough on its own: this job is what stops that regressing silently,
+  # the same reasoning as build-contract above. Caught two real breaks on the first run (missing
+  # src/welford.ts, undeclared vite devDependency) — fixed, and this job is what would have caught
+  # them in CI instead of a judge's own clone.
+  check-core-server:
+    name: Core Silicon DNA server.ts builds and starts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Typecheck (server.ts + src/services, src/middleware, src/db, src/utils)
+        run: npx tsc --noEmit
+
+      - name: Start smoke test — must come up and answer /metrics within 10s
+        run: |
+          npx tsx server.ts &
+          PID=$!
+          for i in $(seq 1 10); do
+            if curl -sf http://localhost:3000/metrics > /dev/null; then
+              echo "OK: server answered /metrics"
+              kill $PID
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "ERROR: server never answered /metrics within 10s"
+          kill $PID 2>/dev/null
+          exit 1
+
   check-sdk-and-mcp:
     name: SDK typechecks + MCP server answers
     runs-on: ubuntu-latest
