@@ -1,0 +1,27 @@
+[package]
+name = "sequencer-oracle"
+version = "1.0.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+casper-contract = "5.1.1"
+casper-types    = "6.0.1"
+base64ct        = "=1.6.0"
+
+[profile.release]
+codegen-units = 1
+lto           = true
+opt-level     = "z"
+panic         = "abort"
+
+[patch.crates-io]
+# FIX 2026-07-25: this was an absolute path to one specific machine
+# (/opt/casper-oracle/casper-contract-patched), and the patched crate was not in this repo — so the
+# contract could not be built by anyone else. Cloning and building failed on the first crate with
+# `error[E0554]` + "`#[no_mangle]` cannot be used on internal language items" (both reproduced).
+# The patch itself is two removed attributes; see patches/ and run ./prepare_patched_crate.sh first,
+# which fetches casper-contract 5.1.1 from crates.io into vendor/ and applies it.
+casper-contract = { path = "vendor/casper-contract" }

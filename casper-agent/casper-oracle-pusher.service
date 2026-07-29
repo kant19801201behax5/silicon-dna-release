@@ -1,0 +1,18 @@
+[Unit]
+Description=Phoenix Zero — Casper Sequencer Health Oracle Pusher
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=phoenix
+WorkingDirectory=/opt/casper-oracle
+EnvironmentFile=/opt/casper-oracle/pusher.env
+ExecStart=/usr/bin/python3 /opt/silicon-dna/casper-agent/pusher/casper_oracle_pusher.py
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
