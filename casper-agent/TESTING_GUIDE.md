@@ -219,6 +219,28 @@ the actual verification runs.
 
 ---
 
+## 10. Build and Run the Core Silicon DNA Server (the code behind sections 4/4b above)
+
+Added 2026-07-29: `server.ts` and everything under `src/services/`, `src/middleware/`,
+`src/db/`, `src/utils/` at the repo root are the actual, currently-deployed implementation
+that [`../src/SILICON_DNA_LAYERS.md`](../src/SILICON_DNA_LAYERS.md) cites by exact line
+number — not a description of it, the real file. CI builds and starts it on every push
+(`check-core-server` job); to do the same yourself:
+
+```bash
+git clone https://github.com/kant19801201behax5/silicon-dna-release
+cd silicon-dna-release
+npm install
+npx tsc --noEmit    # typecheck — should produce no output
+npm start           # or: npx tsx server.ts
+```
+
+Should print `Silicon DNA [L0_CORE] Active → http://localhost:3000` within a second or two.
+`curl http://localhost:3000/metrics` returns Prometheus-format metrics from your own local
+instance (separate from the production one at rtt.phoenix-ai.work).
+
+---
+
 ## Summary
 
 | What to check | Where |
@@ -230,5 +252,6 @@ the actual verification runs.
 | Live data | rtt.phoenix-ai.work/api/public-feed |
 | Dashboard | rtt.phoenix-ai.work/casper |
 | MCP server (4 tools) | `casper-agent/mcp-server/` |
+| Core server (buildable from clean clone) | `server.ts` + `src/` at repo root |
 | Demo video (general) | https://youtu.be/o-CQfiSfQ4o |
 | Demo video (Casper-specific, 52s) | https://youtu.be/KtTrz23B92w |
