@@ -1,5 +1,23 @@
 # Silicon DNA — Causal Engine
 
+*Corrected 2026-07-29: this document was written as if the causal engine below
+is part of Phoenix Zero / Silicon DNA's own oracle pipeline. It is not. Grepped
+the entire `silicon-dna-release` repo for any implementation (SGD regression,
+Pearson R², ATE, `best_var`) — zero matches; nothing in this repo computes it.
+The real implementation lives in `decisionEngine.ts` on the production server,
+inside JARVIS — a separate autonomous trading agent that uses this exact R²/ATE/
+best_var mechanism to gate its own KuCoin trades (confirmed live: `r2Floor: 0.60`,
+`r2Ceiling: 0.90`, `ateWeight: 40` in that file). It does not read from or write
+to Phoenix Zero's public feed, and `mantle_pusher.js` does not call it — the
+Mantle oracle's numbers come from network tension/revert-ratio math only (see
+`mantle-agent/README.md`). The `r2`/`ate`/`bestVar` fields and thresholds
+(`r2Floor: 0.60`, `r2Ceiling: 0.90`) are real and confirmed in that file — but
+the specific R²=0.998 figure below could not be re-verified live in this pass
+(the current production log only holds ~17 lines with no `r2` output; recent
+`decision_engine_state.json` trade records show `ate` values but no `r2`).
+Treat 0.998 as an unverified historical figure, not a currently-confirmed one,
+until re-checked against a live reading.*
+
 ## Overview
 
 The Causal Engine implements SGD-based online linear regression to find which

@@ -33,29 +33,45 @@ One call. Production-grade data. Live since March 2026.
 
 ## Architecture
 
+*Corrected 2026-07-29: the diagram below previously placed a "Causal Engine (R²=0.998)"
+step between the RTT probes and the Mantle push, implying it's part of this live data
+path. It isn't — that SGD-regression/R² mechanism is real, but it runs inside JARVIS, a
+separate trading agent on this server (confirmed: `r2`/`ate`/`bestVar` fields and
+thresholds in its `decisionEngine.ts`), gating JARVIS's own trades. It does not feed
+`mantle_pusher.js`, which reads `/api/public-feed` directly. Full detail:
+[`src/CAUSAL_ENGINE.md`](src/CAUSAL_ENGINE.md). The layer list also previously
+compressed L5-L11 into "reputation, anomaly, timing, telemetry, causal" — none of
+"anomaly" or "causal" describe real code; corrected below, full citations in
+[`src/SILICON_DNA_LAYERS.md`](src/SILICON_DNA_LAYERS.md).*
+
 ```
 Phoenix Zero (DigitalOcean NYC1)
 │
 │  Probes 6 chains every 2 seconds:
 │    eth_blockNumber / eth_gasPrice / debug_traceBlock
 │    Measures: RTT P99, revert ratio, stall flags, blob fees
+│    arb_revert_ratio → network stress, 27-second lead time on a separate
+│    documented event (May 17, 2026; see the Data table below)
 │
-↓  Causal Engine (R²=0.998)
-│    Online SGD regression across the RTT/gas/revert telemetry feed
-│    Also powers other internal Phoenix Zero systems not part of this repo
-│    arb_revert_ratio → network stress with 27-second lead time
+↓  /api/public-feed  (this is what mantle_pusher.js actually reads — no
+│    causal-model step in this path; see correction note above)
 │
-↓  Silicon DNA (12-layer classifier)
+↓  Silicon DNA (per-visitor bot-detection cascade, NOT read by the Mantle
+│    pusher above — separate purpose, separate data path)
 │    L0: CPU jitter physics (probe-worker.mjs)
 │    L1: ML-KEM-768 post-quantum channel (NIST FIPS 203)
 │    L2: TLS fingerprint (placeholder pending real JA4 — see src/SILICON_DNA_LAYERS.md)
-│    L3: Behavioral rhythm analysis
-│    L4: Argon2 proof-of-work (200ms bot tax)
-│    L5-L11: reputation, anomaly, timing, telemetry, causal
+│    L3: "Frankenstein" UA/header consistency check
+│    L4: Argon2id proof-of-work (ASIC-spoof + slow-time guards)
+│    L5-L9: session hash, PoW difficulty cache, synthetic-rhythm detector,
+│           Spearman stall detector, network telemetry gate
+│    Separately: 3-class classifier (/api/classify), Golden Seal protocol
+│           (/api/enclave), wallet-Sybil binding (/api/wallet/bind) —
+│           full detail in src/SILICON_DNA_LAYERS.md
 │
 ↓  TuringOracle.sol (Mantle Sepolia)
-     update() every 60s — publishes network state on-chain
-     is_legitimate() → any Mantle protocol bot-gate
+     update() every 60s — publishes network-telemetry state on-chain
+     is_legitimate() → any Mantle protocol congestion/safety gate
 ```
 
 ---
@@ -71,8 +87,12 @@ require(oracle.is_legitimate(), "Silicon DNA: traffic not verified");
 ```
 
 **Autonomous pusher:** `mantle-agent/mantle_pusher.js`
-- Reads live Silicon DNA state every 60 seconds
+- Reads `/api/public-feed` (network telemetry — RTT/revert-ratio/tension) every 60 seconds
+- Derives `trust_bps` from average cross-chain tension and `bot_ratio_bps` from Arbitrum's
+  revert ratio — these are network-congestion proxies, not a per-visitor bot/human verdict
 - Publishes: `{human_traffic, trust_score, bot_ratio, mantle_safe, p99_ms}` to Mantle contract
+  (field names carried over from the original design; see `mantle-agent/README.md` for the
+  exact formula)
 
 ---
 
@@ -92,7 +112,7 @@ records"). Current throughput, measured off the live feed on 2026-07-25, is far 
 | Lifetime total | not published — raw feed is rotated, so a cumulative count is not independently re-derivable; the per-day rate above is |
 | Data collection start | March 15, 2026 |
 | Chains monitored | Mantle, Arbitrum, Base, Optimism, zkSync, Casper (6 chains; Ethereum L1 also probed separately for blob-fee/gas-pressure signals) |
-| Causal model R² | 0.998 |
+| Causal model R² | 0.998 — real number, but from JARVIS's own trading-signal model (separate system, see [`src/CAUSAL_ENGINE.md`](src/CAUSAL_ENGINE.md)); not computed by or wired into this repo's oracle/pusher code |
 | Lead time — documented in this repo | **3 minutes**: `arb_revert_ratio` crossed 15% at 01:07 UTC, acute stall at 01:10 (May 31, 2026 — see [`proof/`](proof/mev_war_2026-05-31.md)) |
 | Lead time — separate earlier event | **27 seconds**: RTT spike at 23:29:50 → Base revert ratio crossed its threshold at 23:30:10 (May 17, 2026). Different signal pair, so not directly comparable to the 3-minute figure above; the raw log for it lives in the internal write-up, not in this repo |
 | MEV war documented | May 31, 2026 — 72.1% revert ratio |

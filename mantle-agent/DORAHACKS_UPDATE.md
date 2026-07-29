@@ -5,7 +5,12 @@
 ---
 
 ## Vision (256 chars)
-Silicon DNA turns continuous live sequencer telemetry into investment-grade intelligence - running since 2026-03-15, ~258,700 measurements/day across 6 chains. R²=0.998 causal model. Detected a 72.1% MEV war 3 minutes early. Now published on-chain via TuringOracle on Mantle Sepolia.
+Silicon DNA turns continuous live sequencer telemetry into investment-grade intelligence - running since 2026-03-15, ~258,700 measurements/day across 6 chains. Detected a 72.1% MEV war 3 minutes early. Now published on-chain via TuringOracle on Mantle Sepolia.
+
+*Corrected 2026-07-29: dropped "R²=0.998 causal model" from this vision line — that
+figure belongs to a causal-signal model confirmed running inside JARVIS (a separate
+trading agent on the same server), not to this oracle or the Mantle pusher. See the
+correction note in `src/CAUSAL_ENGINE.md` for the full explanation.*
 
 ---
 
@@ -37,9 +42,17 @@ Warning:  >15%   (MEV activity starting)
 MEV war:   72%   (May 31, 2026 — documented event)
 ```
 
-Causal model (online SGD regression, Pearson R²): **R²=0.998** at steady state (best-performing predictor is a gas-pressure-derived velocity term — see `src/CAUSAL_ENGINE.md` for method, exact configuration is not published)
+*Corrected 2026-07-29: the "causal model, R²=0.998" claim previously here has been
+removed — that SGD-regression/R²/ATE mechanism is real and running, but it's inside
+JARVIS (a separate trading agent on the same server, gating its own trades), not part
+of this oracle's code. See `src/CAUSAL_ENGINE.md` for the full correction. The
+revert-ratio threshold crossings above (4-8% baseline → >15% warning → 72% MEV war)
+are this project's own simple threshold logic, unaffected by that removal.*
 
-This signal precedes visible gas price spikes by **27 seconds** on average. That's the same edge that institutional MEV searchers have — but we measured it from first principles.
+This signal precedes visible gas price spikes by **27 seconds** on average, based on
+a separately-documented event (RTT spike → revert-ratio threshold crossing, May 17
+2026 — see the main [`README.md`](../README.md) proof section), not the SGD model
+above.
 
 ---
 
