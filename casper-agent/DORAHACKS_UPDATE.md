@@ -163,15 +163,20 @@ counterparty identity screening — which is exactly what Silicon DNA's identity
 gate already does (KL-divergence Sybil clustering + a HUMAN / LEGIT_AGENT /
 MALICIOUS_BOT classifier). We do **not** implement those token standards and
 don't claim to; the point is narrower and honest: regulated RWA settlement on
-Casper needs both a network-safety check *and* an identity/eligibility check,
-and both already exist here and are tested. That's also literally the
-buildathon's own stated focus: "Agentic AI... with special emphasis on DeFi
-and/or real-world assets (RWA)." We built for DeFi first; the MCP server now
-also exposes an explicit RWA-framed tool (`get_rwa_settlement_signal` —
-combines network safety with identity screening, the two things an RWA
-settlement decision actually needs) so the same verified infrastructure serves
-both use cases honestly, without inventing a separate RWA product we haven't
-built.
+Casper needs a network-safety check, a real exit/reference market, *and* an
+identity/eligibility check, and as of 2026-07-29 all three exist here and are
+tested. That's also literally the buildathon's own stated focus: "Agentic
+AI... with special emphasis on DeFi and/or real-world assets (RWA)." The MCP
+server exposes an explicit RWA-framed tool (`get_rwa_settlement_signal`) that
+combines: (1) network safety — now including a calibrated, Casper-native P99
+threshold (2000ms, derived from 21,591 historical measurements, not an
+arbitrary guess), not just the EVM chains; (2) CSPR/USD market liquidity read
+live from Kraken's public API (spread, 24h volume) — directly tied to CSPR
+going live for trading on Kraken July 21, 2026, turning that market-timing
+narrative into an actual signal instead of just context; (3) identity
+screening. One `ready_to_settle` verdict, so the same verified infrastructure
+serves both DeFi and RWA use cases honestly, without inventing a separate RWA
+product we haven't built.
 
 ---
 
@@ -250,7 +255,7 @@ is the next step, not yet done.
 - **Oracle backend:** Python 3.10, FastAPI, WebSocket broadcaster
 - **Identity layer:** Silicon DNA v5.0 — 12-layer detection, ML-KEM-768 PQC
 - **Payments:** x402 protocol, currently via Base mainnet. Casper's x402 Facilitator launched natively on June 4, 2026 (supports testnet, `x402-facilitator.cspr.cloud`) — migration planned, requires a CSPR.cloud access token
-- **MCP:** a Model Context Protocol server (`casper-agent/mcp-server/`) exposes the same safety data as MCP tools for any MCP-compatible agent — part of Casper's own promoted AI toolkit. Includes an RWA-specific tool (`get_rwa_settlement_signal`) combining network safety with identity-screening context
+- **MCP:** a Model Context Protocol server (`casper-agent/mcp-server/`) exposes the same safety data as MCP tools for any MCP-compatible agent — part of Casper's own promoted AI toolkit. Includes an RWA-specific tool (`get_rwa_settlement_signal`) combining a calibrated Casper-native safety threshold, live Kraken CSPR/USD liquidity, and identity-screening context
 - **CSPR.cloud:** used directly to deploy and interact with the RWA Settlement Gate contract (`ODRA_CASPER_LIVENET_*` config, see above)
 - **CSPR.click — deliberately not used, and why:** we checked its own SDK reference (24 methods: `init`, `connect`, `signIn`, `getActiveAccount`, `sign`, …) before deciding. Every method requires a connected browser wallet extension or CSPR.click's own UI — there is no headless/server-side call path. Our agent is an unattended, 24/7 server process with its own local key file, not a browser dApp with a human clicking "connect wallet." Wiring CSPR.click in anyway would mean either faking the integration or bolting on a headless-browser wallet-automation layer solely to check a box — both worse than being direct about a real architectural mismatch. `getCsprCloudProxy()` looked like a possible server-side path, but it's documented as part of the same wallet-connected SDK instance, not an independent client.
 - **Tests:** 280/280 Silicon DNA · 21/21 agent tests — 100%
@@ -283,10 +288,10 @@ today, not a promise.
 | --- | --- |
 | **Technical execution** — code quality, architecture, completeness | 4-layer stack, each independently runnable: Rust/WASM contract (3 entry points), Node.js agent, TypeScript SDK, MCP server. Agent test suite **21/21**. CI builds the contract from a clean clone, typechecks the SDK and exercises the MCP handshake on every push |
 | **Innovation and originality** | The signal itself: L2 sequencer *revert ratio* as a leading indicator of cross-chain stress. Not published in any public dataset — measured directly, and documented against raw feed data in [`../proof/mev_war_2026-05-31.md`](../proof/mev_war_2026-05-31.md) (72.1% MEV war, 3-minute lead) |
-| **Use of AI / agentic systems** | Full perceive → goal → decide → act loop with no human in any cycle: reads the feed, holds the goal "don't waste gas", decides safe/unsafe, calls `update()` on-chain. **1,806** autonomous calls, **14** self-initiated pauses, **35.0 CSPR** saved, **9,178 min** uptime, 0 restarts. Uses two components of the Casper AI Toolkit directly — **x402 micropayments** and an **MCP server** |
-| **Real-world application (DeFi / RWA)** | DeFi: one-call `is_safe()` gate any Casper protocol can require before transacting. RWA: `get_rwa_settlement_signal` MCP tool pairing network-safety with counterparty screening — the two checks regulated settlement needs. Reused outside this hackathon already (Tenderly circuit-breaker, separate public repo) |
+| **Use of AI / agentic systems** | Full perceive → goal → decide → act loop with no human in any cycle: reads the feed, holds the goal "don't waste gas", decides safe/unsafe, calls `update()` on-chain. **1,806** autonomous calls, **14** self-initiated pauses, **35.0 CSPR** saved, **9,178 min** uptime, 0 restarts. Uses **four of five** components of the Casper AI Toolkit directly — **x402**, **MCP**, **CSPR.cloud** (deploys the RWA gate), **Odra**. The fifth, CSPR.click, was checked and deliberately not used — its SDK is browser-wallet-only, no headless path exists for an unattended server agent (see README) |
+| **Real-world application (DeFi / RWA)** | DeFi: one-call `is_safe()` gate any Casper protocol can require before transacting. RWA: `get_rwa_settlement_signal` MCP tool combining a calibrated Casper-native safety threshold, live Kraken CSPR/USD liquidity, and counterparty screening into one `ready_to_settle` verdict — plus, as of 2026-07-29, the same logic as an on-chain gate (`RwaSettlementGate`, live on testnet) any Casper contract can call directly. Reused outside this hackathon already (Tenderly circuit-breaker, separate public repo) |
 | **User experience and design** | Live dashboard at [rtt.phoenix-ai.work/casper](https://rtt.phoenix-ai.work/casper) and [phoenix-zero.vercel.app](https://phoenix-zero.vercel.app); zero-setup verification via `curl` on the public feed; a step-by-step [TESTING_GUIDE.md](./TESTING_GUIDE.md) written for a judge with no prior context |
-| **Smart-contract work** | Deployed and live on Casper Testnet: `hash-2a7ebbc9…261f3a`, entry points `update` / `is_safe` / `get_state`, receiving transactions right now. Contract redeployed once to fix a real `EntryPointType` bug after a network protocol upgrade — documented rather than hidden |
+| **Smart-contract work** | Two live Casper Testnet contracts: `SequencerOracle` (`hash-2a7ebbc9…261f3a`, raw WASM, entry points `update`/`is_safe`/`get_state`, receiving transactions right now — redeployed once to fix a real `EntryPointType` bug after a network protocol upgrade, documented rather than hidden) and `RwaSettlementGate` (`contract-package-fab9c0a1…b42511d`, built with Odra, deployed 2026-07-29) |
 | **Long-term launch plans** | See the section below: production since March 2026 (predates the buildathon), CSPR.cloud key tested, native Casper x402 client ready to wire in, direct contact with the Casper developer TG group, oracle already reused in a second public project |
 | **Long-term ecosystem impact** | Built as shared infrastructure, not a single-app feature: any Casper agent can read `is_safe()` free on-chain or pay $0.01 via x402 for the richer feed. Directly serves Casper's stated direction — a trust layer for the agentic economy and regulated RWA settlement |
 
