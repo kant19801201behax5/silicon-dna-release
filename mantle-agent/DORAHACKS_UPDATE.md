@@ -89,15 +89,25 @@ Node.js agent running on DO NYC1. Reads Silicon DNA state, pushes to Mantle cont
 
 ### Silicon DNA — Identity Layer
 
-Beyond network data, Silicon DNA classifies every web connection:
+*Corrected 2026-07-29: this section previously had its own copy of the fictional
+trust-score cutoffs and "Reputation → Anomaly detection → ... → Causal engine"
+pipeline — missed in an earlier pass that fixed the same claim elsewhere in this
+file. Real breakdown, with file/line citations: [`../src/SILICON_DNA_LAYERS.md`](../src/SILICON_DNA_LAYERS.md).*
 
-| Class | Trust | What It Means |
-|-------|-------|---------------|
-| HUMAN | >0.70 | Real browser user |
-| LEGIT_AGENT | >0.45 | Verified AI agent |
-| MALICIOUS_BOT | ≤0.45 | Adversarial, dropped |
+Beyond network data, Silicon DNA classifies every web connection via a real,
+separate 3-class classifier (`agentClassifier.ts`, `POST /api/classify`,
+additive scoring — different formula, not the cutoffs previously listed here):
+HUMAN / LEGIT_AGENT / MALICIOUS_BOT.
 
-12-layer pipeline: CPU jitter physics → ML-KEM-768 post-quantum → TLS fingerprint (currently a fixed placeholder value pending a real JA4 implementation — see note below) → Behavioral rhythm → Argon2 PoW → Reputation → Anomaly detection → Network telemetry → Causal engine.
+Per-visitor cascade: CPU jitter physics → ML-KEM-768 post-quantum → TLS
+fingerprint (currently a fixed placeholder value pending a real JA4
+implementation — see note below) → "Frankenstein" UA/header check → Argon2id
+PoW → session identity hash → PoW-difficulty cache → synthetic-rhythm detector
+→ Spearman stall detector → network telemetry gate. Separately: the 3-class
+classifier above, a "Golden Seal" timing-rhythm + entropy-seal protocol
+guarding `/api/enclave`, and EIP-191 wallet-Sybil binding. None of this feeds
+the Mantle pusher, which reads network telemetry only (see "Mantle Integration"
+above).
 
 Note on the TLS fingerprint layer: real JA4 fingerprinting requires reading the raw TLS ClientHello, which isn't visible to the origin server once traffic is proxied through Cloudflare (a paid Bot Management tier would expose it via headers). This layer is currently a fixed placeholder in the live code, honestly disclosed here rather than left silently implied as working.
 
@@ -133,7 +143,7 @@ Any agent reading our oracle paused at 01:07 — **8 minutes before the cascade*
 | Oracle server | Node.js, WebSocket, Worker Threads |
 | CPU jitter probe | Node.js `process.hrtime.bigint()` |
 | Post-quantum channel | ML-KEM-768 (NIST FIPS 203, `mlkem` npm) |
-| Causal model | SGD regression, Pearson R² |
+| Causal model | SGD regression, Pearson R² — real, live (R²=0.9983 at last check), but runs inside JARVIS, a separate system on the same server; not part of this repo's oracle/pusher code, see `src/CAUSAL_ENGINE.md` |
 | Dashboard | React + Vite |
 | Mantle contract | Solidity 0.8.20, Mantle Sepolia |
 | Mantle pusher | ethers v6, Node.js |
