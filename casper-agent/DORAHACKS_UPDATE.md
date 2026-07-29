@@ -331,6 +331,38 @@ with value.
 
 ---
 
+## Match Against All Four Official Build Examples — Honest Self-Assessment
+
+The buildathon's FAQ lists four example build prompts. Checked all four directly against the running
+code (not assumed) — two fit, two honestly don't, explained below rather than stretched to fit.
+
+**#2 (RWA oracle with verifiable on-chain identity) — FITS.** Covered above: this is the submission's
+core.
+
+**#4 (agent verifies off-chain criteria, issues a non-disclosing compliance token) — FITS structurally.**
+`src/services/zkProof.ts`: 8 boolean layer-pass results collapse into one HMAC commitment a caller can
+present later to prove "this session passed these checks" without re-exposing the raw values that
+produced them. Single-use, 5-minute expiry. Applied to bot/identity criteria here, not literal KYC
+documents — same verify-off-chain / attest-without-disclosing shape as the example, not claimed as
+KYC/AML. Detail in the Layer 2 section above.
+
+**#1 (yield-routing agent) — does NOT fit, and here's the precise reason, not a dismissal.** The Casper
+agent (`ts-agent/agent.js`) reads Casper network conditions and publishes real transactions to a Casper
+smart contract continuously — **2,937 autonomous on-chain calls**, this is not in question. What it
+publishes is a binary safety verdict (`safe`/`unsafe` — is the network healthy enough to transact) into
+a Sequencer Health Oracle, not a capital-allocation decision across yield venues. Network-safety-gating
+and yield-routing are different skills built on the same underlying telemetry; this submission built the
+former. Not claiming the latter.
+
+**#3 (multi-agent DAO governance) — checked specifically, not found, one near-miss documented.**
+Grepped the entire JARVIS trading-agent codebase (a separate system on the same server) for
+`dao|governance|proposal|multi-agent`: one match, in `agent.ts` — `"JARVIS already filters via
+TRAJ-GATE, regime, LLM governance."` That's JARVIS's own internal trade-signal filtering (a single
+agent's decision pipeline), not multiple autonomous agents voting or coordinating to govern a protocol.
+Noted here explicitly so the near-miss is on record rather than silently absent.
+
+---
+
 ## Long-Term Launch Plans
 
 **Already in motion, not a hypothesis:**
