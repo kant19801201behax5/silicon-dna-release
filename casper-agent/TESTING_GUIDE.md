@@ -85,6 +85,35 @@ Returns a JSON array of recent readings, one object per ~1-minute tick, each wit
 
 ---
 
+## 4b. Verify the Silicon DNA Systems Beyond the Main Cascade
+
+Full breakdown: [`../src/SILICON_DNA_LAYERS.md`](../src/SILICON_DNA_LAYERS.md). Three of these are
+live on production right now, no key required:
+
+```bash
+# 3-class classifier (HUMAN/LEGIT_AGENT/MALICIOUS_BOT, real additive scoring)
+curl -X POST https://rtt.phoenix-ai.work/api/classify -H "Content-Type: application/json" \
+  -d '{"ua":"Mozilla/5.0","spearmanRho":0.5,"variance":3,"entropy":3,"frankensteinScore":0,"hasPoW":false}'
+# → {"agentClass":"HUMAN","confidence":0.8,"signals":[...]}
+
+# Wallet-Sybil binding stats (empty until a wallet actually binds via /api/wallet/bind)
+curl https://rtt.phoenix-ai.work/api/wallet/stats
+# → {"totalBound":0,"sybilGroups":0,"largestGroup":0}
+
+# RPC shadow-filter stats — verifiably always zero, on purpose: the endpoint is real but the
+# middleware that would populate it (shadowFilterMiddleware) is defined and never mounted
+# anywhere in the codebase. Listed here as a known, disclosed gap, not a working feature.
+curl https://rtt.phoenix-ai.work/api/shadow-stats
+# → {"tracked_ips":0,"throttled_ips":0,"total_requests":0,"bot_hits":0}
+```
+
+`/api/sync-pulse` (Golden Seal rhythm protocol) and `/api/enclave` (entropy-seal gate) both require
+an established PQC session first (`403 PQC_SESSION_NOT_ESTABLISHED` on a bare `curl`) — they're
+exercised by the live dashboard's own WebSocket handshake, not directly curl-able without replaying
+that handshake. Source: `src/services/rhythmManager.ts`, `src/services/sealValidator.ts`.
+
+---
+
 ## 5. Watch Live Oracle Dashboard
 
 https://rtt.phoenix-ai.work/casper
