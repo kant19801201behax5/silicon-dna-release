@@ -68,10 +68,16 @@ thermal noise), a real ML-KEM-768 post-quantum handshake, a TLS-fingerprint plac
 disclosed as not-yet-real — JA4 needs raw ClientHello bytes this Cloudflare-proxied setup can't
 read), a User-Agent/platform consistency check, Argon2id proof-of-work (with ASIC-spoof and
 slow-time replay guards), and two statistical timing checks (synthetic-rhythm variance/autocorrelation,
-and a Spearman-correlation "static script" detector) — full breakdown, verified line-by-line against
-the actual deployed code, in [`../src/SILICON_DNA_LAYERS.md`](../src/SILICON_DNA_LAYERS.md). Cross-IP
-Sybil cohorting by **KL-divergence** on behavioural fingerprints (`sybilCluster.ts`, cohort threshold
-0.15) runs alongside the cascade as its own service.
+and a Spearman-correlation "static script" detector). Three more independent systems sit alongside
+that cascade: a "Golden Seal" timing-rhythm + HMAC entropy-seal protocol guarding the `/api/enclave`
+endpoint specifically (its own trust score, its own 403s, unrelated to the checks above), a real
+6-signal 3-class classifier (`POST /api/classify` → HUMAN/LEGIT_AGENT/MALICIOUS_BOT), and EIP-191
+wallet-to-behavioral-fingerprint binding with Sybil detection on shared fingerprints
+(`POST /api/wallet/bind`). Cross-IP Sybil cohorting by **KL-divergence** on behavioural fingerprints
+(`sybilCluster.ts`, cohort threshold 0.15) runs alongside all of this as its own service. Full
+breakdown — including one piece of code that's defined but *not* actually wired in, called out
+explicitly rather than glossed over — verified against the actual deployed code (imports, routes,
+and call sites, not just file presence) in [`../src/SILICON_DNA_LAYERS.md`](../src/SILICON_DNA_LAYERS.md).
 
 There is also an HMAC-based commit-reveal proof ("ZK-lite" — not true zero-knowledge, all layer bits
 are visible in plaintext, disclosed as such): 8 boolean layer-pass results collapse into one HMAC
@@ -84,10 +90,11 @@ on-chain") — applied here to bot/identity criteria rather than literal KYC doc
 what this system actually verifies. Not claimed as KYC/AML; claimed as the same verify-off-chain,
 attest-without-disclosing architecture, already built and running.
 
-*Corrected 2026-07-29: this paragraph previously repeated the same fictional "L7 one-class-SVM" /
-"L10 causal-engine" / "L11 composite trust score" claims that were removed from the canonical file
-on 2026-07-25 — fixing the canonical file and not this summary meant the wrong version was still
-what a judge reading only this page would see. Rewritten to match what's actually running.*
+*Corrected 2026-07-29, twice same day: first pass removed the fictional "L7 one-class-SVM" /
+"L10 causal-engine" / "L11 composite trust score" claims but was itself based on an incomplete
+check (server.ts's main cascade only, not every file under `src/services/`). Second pass added the
+Golden Seal protocol, the real classifier, and wallet binding — three real, wired systems the first
+pass missed entirely — after being pushed to re-verify rather than accept the first correction as final.*
 
 **What actually connects it to the x402 oracle (verified live, 2026-07-21):** an IP
 that Silicon DNA's own detection has already flagged and banned is rejected with
