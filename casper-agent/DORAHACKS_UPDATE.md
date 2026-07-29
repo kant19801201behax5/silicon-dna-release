@@ -66,9 +66,11 @@ traffic to this domain. It's **not** a single L0→L11 pipeline feeding one scor
 of independent checks, any one of which can ban an IP on its own: CPU jitter physics (real hardware
 thermal noise), a real ML-KEM-768 post-quantum handshake, a TLS-fingerprint placeholder (honestly
 disclosed as not-yet-real — JA4 needs raw ClientHello bytes this Cloudflare-proxied setup can't
-read), a User-Agent/platform consistency check, Argon2id proof-of-work (with ASIC-spoof and
-slow-time replay guards), and two statistical timing checks (synthetic-rhythm variance/autocorrelation,
-and a Spearman-correlation "static script" detector). Three more independent systems sit alongside
+read), a User-Agent/platform consistency check, Argon2id proof-of-work (with ASIC-spoof, slow-time
+replay, GPU/UA-consistency, and WebDriver/automation-artifact guards — the last two found 2026-07-29
+after discovering this doc's local checkout was stale against the actual deployed server.ts), and two
+statistical timing checks (synthetic-rhythm variance/autocorrelation, and a Spearman-correlation
+"static script" detector). Three more independent systems sit alongside
 that cascade: a "Golden Seal" timing-rhythm + HMAC entropy-seal protocol guarding the `/api/enclave`
 endpoint specifically (its own trust score, its own 403s, unrelated to the checks above), a real
 6-signal 3-class classifier (`POST /api/classify` → HUMAN/LEGIT_AGENT/MALICIOUS_BOT), and EIP-191

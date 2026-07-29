@@ -15,6 +15,22 @@ Both errors are the same root cause: conclusions drawn from a partial file list
 instead of the actual directory contents. Added below, each marked with exactly
 how it was verified (import + route + call site, not just presence of a file).*
 
+*Corrected 2026-07-29 (third pass, same day, after being told directly to keep
+looking): the local checkout this whole file was checked against was itself
+stale — `diff`'d against the actual file running in production (`/opt/silicon-dna/server.ts`,
+live process confirmed via `ps`/`systemctl`) and found a real gap: an import
+and ~40 lines this local copy didn't have at all. Local server.ts has now been
+replaced with the deployed version. Two more independent ban checks were
+missing as a direct result — folded into L4 below (L1.1 GPU/UA consistency,
+L1.2 automation/WebDriver detection) — plus a new localhost-only endpoint,
+`GET /api/check-ip`, letting other local services (the x402 gateway) query
+Silicon DNA's ban list without duplicating logic. Root cause, again: checked
+the local repo as if it were authoritative without diffing it against what's
+actually deployed. No SVM, composite score, or causal-engine content turned up
+anywhere in this pass either — searched the full deployed tree, its tests, and
+even the separate obfuscated `release/server.js` build artifact (confirmed not
+running; the live process executes `server.ts` directly via `tsx`).*
+
 ## Purpose
 
 Classifies incoming HTTP/WebSocket traffic and independently gates it at several
@@ -52,13 +68,26 @@ L3  "Frankenstein" Consistency Check — REAL, independent ban trigger
     automation headers (`x-puppeteer-version`, `x-selenium-id`). Score ≥ 100 →
     immediate ban (`sniperFilter`), independent of every other check here.
 
-L4  Argon2id Proof-of-Work — REAL
+L4  Argon2id Proof-of-Work — REAL, plus two independent sub-checks found
+    2026-07-29 (my local checkout was stale vs. the actual deployed server.ts —
+    see the correction note at the top of this file)
     `GET /api/challenge` → solve with `hash-wasm`'s `argon2id` (salt
     `quantum_salt_3.2`) → `POST /api/verify-pow`, server recomputes and compares.
     Guards against ASIC/GPU spoofing (`t_min = (m_cost/1024) * 0.8`, rejects
     implausibly fast solves) and "slow-time" replay (claimed solve time exceeding
     real server-side wall-clock elapsed). Difficulty (`m_cost`) adapts per-IP via
     `argonProfiles` (doubles on fast solves <150ms, eases on slow ones >600ms).
+
+    Before the PoW hash itself is checked, the same `/api/verify-pow` submission
+    carries a client fingerprint (`fp`) that's run through two more independent,
+    immediate-ban checks (both `req.socket.destroy()`, same as L3):
+    - **L1.1 GPU/UA consistency**: UA claims macOS but the reported GPU string
+      isn't Apple/Metal → `FINGERPRINT_MISMATCH` ban.
+    - **L1.2 Automation/WebDriver detection** (`src/services/automationDetector.ts`):
+      `navigator.webdriver===true`, ChromeDriver `$cdc_` artifacts, PhantomJS/
+      Nightmare.js artifacts, or the combination of 0 plugins + empty
+      `navigator.languages` → `AUTOMATION_DETECTED` ban. Reasons are collected
+      independently so the ban log shows *why*, not just a bare flag.
 
 L5  Session Identity Hash — REAL, different formula than earlier documented
     `computeQuantumDNAHash()`: `HMAC-SHA256(key = L1's ML-KEM session key,
