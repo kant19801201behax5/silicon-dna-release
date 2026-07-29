@@ -217,10 +217,13 @@ cycle is the next step, not done yet.
 ### On CSPR.click — checked, deliberately not used
 
 Of the five components in Casper's promoted AI toolkit (x402, MCP servers, CSPR.click
-Agent Skill, CSPR.cloud API, Odra), this repo genuinely uses four: **x402** (payment
-gateway), **MCP** (`mcp-server/`), **CSPR.cloud** (deploys `rwa-settlement-gate/`), and
-**Odra** (`rwa-settlement-gate/`). CSPR.click is the exception, and it's a deliberate
-one: its own SDK reference lists 24 methods (`init`, `connect`, `signIn`,
+Agent Skill, CSPR.cloud API, Odra), this repo genuinely uses three: **x402** (payment
+gateway), **MCP** (`mcp-server/`), and **Odra** (`rwa-settlement-gate/`). **CSPR.cloud**
+was tested — the API key is confirmed working against the x402 facilitator — but is not
+wired into the deploy path: `odra-casper-livenet-env` 2.9.0 never sends the
+`CSPR_CLOUD_AUTH_TOKEN` header, so every CSPR.cloud RPC 401s (see above) and the
+`rwa-settlement-gate` deploy runs against the official testnet node instead. CSPR.click
+is the last one, and it's a deliberate exclusion: its own SDK reference lists 24 methods (`init`, `connect`, `signIn`,
 `getActiveAccount`, `sign`, …), and every one of them requires a connected browser
 wallet extension or CSPR.click's own UI — there is no headless/server-side call path.
 This project's agent is an unattended, 24/7 server process signing with its own local
