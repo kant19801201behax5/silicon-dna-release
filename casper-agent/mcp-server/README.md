@@ -20,6 +20,7 @@ safety thresholds (`arb_revert < 15%`, `base_p99 < 500ms`).
 | `get_sequencer_safety` | `{ safe, reason, arb_revert_pct, base_p99_ms, ts }` — the same safe/unsafe decision the on-chain oracle publishes |
 | `get_oracle_state` | Full raw latest measurement across all 6 monitored chains |
 | `get_rwa_settlement_signal` | Network safety (incl. Casper's own P99) + Kraken CSPR/USD liquidity + identity-screening context, combined into one `ready_to_settle` verdict for tokenized real-world-asset (RWA) settlement — see below |
+| `explain_settlement_decision` | Same signals, explained in plain language by a real LLM call (OpenRouter) — see below. Optional; the other three tools need no configuration |
 
 ### `get_rwa_settlement_signal`
 
@@ -47,6 +48,33 @@ reports all three and combines them into one `ready_to_settle` verdict:
 - **Identity screening** (`identity_screening`) — Silicon DNA's live bot-ban
   gate on the paid x402 endpoint (verified in production — see
   `casper-agent/CHECKLIST.md`).
+
+### `explain_settlement_decision`
+
+Takes the exact same live signals as `get_rwa_settlement_signal` and sends
+them to a real LLM (via [OpenRouter](https://openrouter.ai), default model
+`openai/gpt-4o-mini`) for a short, plain-language explanation of the verdict
+and its main risk driver — matching Casper's own promoted pattern of
+piping on-chain/oracle state into an LLM through MCP. Deliberately kept out
+of the deterministic safety path (`ts-agent/agent.js`, the on-chain
+contracts): if this call fails or the key isn't set, it returns
+`available: false` and never throws, so an optional explanation layer can
+never affect the actual safe/unsafe decision.
+
+```bash
+cp .env.example .env
+# fill in OPENROUTER_API_KEY (free key at https://openrouter.ai/keys)
+```
+
+Live sample (2026-07-29, cost $0.00005565):
+```json
+{
+  "available": true,
+  "ready_to_settle": true,
+  "explanation": "It is currently safe to settle a real-world asset transfer, as the system is ready to settle. The single biggest risk driver is the Casper P99 milliseconds response time, which is at 692 ms and approaching levels that would be deemed unsafe (>= 2000 ms).",
+  "model": "openai/gpt-4o-mini"
+}
+```
 
 ## Run it
 
@@ -78,10 +106,15 @@ Add to `claude_desktop_config.json`:
 
 Tested end-to-end against a real MCP client (`@modelcontextprotocol/sdk`'s
 own `Client` + `StdioClientTransport`) on a completely fresh `npm install` —
-all three tools return real, live, current values matching the production
+all four tools return real, live, current values matching the production
 agent's own logs. `get_rwa_settlement_signal` was verified live catching a
 real high-revert edge case (`arb_revert_pct: 15.73%`, just above the 15%
 threshold) on 2026-07-21, and re-verified 2026-07-29 after adding the
 Casper-native threshold and Kraken liquidity signal — live output that day:
 `casper_p99_ms: 880` (safe, threshold 2000), `market_liquidity: { liquid:
 true, spread_pct: 0.246, volume_24h_usd: 60386 }`, `ready_to_settle: true`.
+`explain_settlement_decision` was verified 2026-07-29 with a real, working
+OpenRouter key end-to-end — real HTTP call to `openai/gpt-4o-mini`, real
+generated explanation referencing the actual live `casper_p99_ms` value
+(692ms that call), real token cost ($0.00005565), confirmed the other three
+tools were unaffected by adding it.

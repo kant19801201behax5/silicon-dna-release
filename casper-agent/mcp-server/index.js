@@ -216,6 +216,107 @@ server.registerTool(
   }
 );
 
+// Real LLM reasoning over the live oracle state — additive, and deliberately
+// NOT in the on-chain safety-critical path (that stays interpretable
+// threshold logic, on purpose — see DORAHACKS_UPDATE.md). This is a second,
+// separate surface: an agent that already has get_rwa_settlement_signal's
+// verdict can ask *why*, in plain language, via an actual LLM call (OpenRouter,
+// any backing model) — matching Casper's own promoted pattern of feeding
+// on-chain/oracle state into an LLM through MCP.
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || "";
+const OPENROUTER_MODEL   = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
+
+server.registerTool(
+  "explain_settlement_decision",
+  {
+    title: "Explain the RWA settlement verdict in plain language (LLM)",
+    description:
+      "Calls a real LLM (via OpenRouter) with the current network-safety, " +
+      "Casper P99, Kraken-liquidity and identity-screening signals from " +
+      "get_rwa_settlement_signal, and returns a short, plain-language " +
+      "explanation of the verdict and its main driver. Requires " +
+      "OPENROUTER_API_KEY in the environment; returns available:false " +
+      "(never throws) if it isn't set or the call fails, so this optional, " +
+      "additive tool can never break the deterministic verdict above.",
+    inputSchema: {},
+  },
+  async () => {
+    if (!OPENROUTER_API_KEY) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            available: false,
+            error: "OPENROUTER_API_KEY not set in environment",
+          }, null, 2),
+        }],
+      };
+    }
+
+    const { latest, health } = await fetchLatest();
+    const kraken = await fetchKrakenLiquidity();
+    const arbRevert = parseFloat(latest.arb_revert || 0);
+    const baseP99   = parseInt(latest.base_p99 || 0, 10);
+    const casperP99 = latest.casper_p99 != null ? Math.round(latest.casper_p99) : null;
+    const evmOk    = arbRevert < ARB_REVERT_MAX && baseP99 < BASE_P99_MAX;
+    const casperOk = casperP99 !== null && casperP99 < CASPER_P99_MAX;
+    const networkSafe = health.safe === true && evmOk && casperOk;
+    const liquidityOk = kraken.available ? kraken.liquid : true;
+    const readyToSettle = networkSafe && liquidityOk;
+
+    const prompt =
+      `You are a risk-explanation assistant for a Casper Network RWA settlement gate.\n` +
+      `Given this live data, explain in 2-3 short sentences whether it's safe to ` +
+      `settle a real-world-asset transfer right now, and name the single biggest ` +
+      `risk driver if not fully safe. Be concise and factual, no hedging filler.\n\n` +
+      `ready_to_settle: ${readyToSettle}\n` +
+      `arb_revert_pct: ${(arbRevert * 100).toFixed(2)} (unsafe >= 15)\n` +
+      `base_p99_ms: ${baseP99} (unsafe >= 500)\n` +
+      `casper_p99_ms: ${casperP99} (unsafe >= 2000)\n` +
+      `kraken_liquidity: ${kraken.available ? JSON.stringify({ spread_pct: kraken.spread_pct, volume_24h_usd: kraken.volume_24h_usd, liquid: kraken.liquid }) : "unavailable"}`;
+
+    try {
+      const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: OPENROUTER_MODEL,
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: 200,
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+      const j = await r.json();
+      if (j.error) throw new Error(j.error.message || JSON.stringify(j.error));
+      const explanation = j.choices?.[0]?.message?.content ?? null;
+      if (!explanation) throw new Error("No content in LLM response");
+
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            available: true,
+            ready_to_settle: readyToSettle,
+            explanation,
+            model: OPENROUTER_MODEL,
+            usage: j.usage,
+          }, null, 2),
+        }],
+      };
+    } catch (e) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({ available: false, ready_to_settle: readyToSettle, error: e.message }, null, 2),
+        }],
+      };
+    }
+  }
+);
+
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
