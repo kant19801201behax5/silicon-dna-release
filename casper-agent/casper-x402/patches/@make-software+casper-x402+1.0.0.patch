@@ -1,0 +1,85 @@
+diff --git a/node_modules/@make-software/casper-x402/dist/cjs/index.js b/node_modules/@make-software/casper-x402/dist/cjs/index.js
+index c1ddff6..36a1fce 100644
+--- a/node_modules/@make-software/casper-x402/dist/cjs/index.js
++++ b/node_modules/@make-software/casper-x402/dist/cjs/index.js
+@@ -628,7 +628,7 @@ var ExactCasperScheme3 = class {
+     }
+     let publicKey;
+     try {
+-      publicKey = import_casper_js_sdk.default.PublicKey.fromHex(p.publicKey);
++      publicKey = (import_casper_js_sdk.default || import_casper_js_sdk).PublicKey.fromHex(p.publicKey);
+     } catch (error) {
+       const message = error instanceof Error ? error.message : String(error);
+       return { isValid: false, invalidReason: ErrInvalidSignature, invalidMessage: message, payer };
+@@ -709,7 +709,7 @@ var ExactCasperScheme3 = class {
+     }
+     let facilitatorPublicKey;
+     try {
+-      facilitatorPublicKey = import_casper_js_sdk.default.PublicKey.fromHex(publicKeyHex);
++      facilitatorPublicKey = (import_casper_js_sdk.default || import_casper_js_sdk).PublicKey.fromHex(publicKeyHex);
+     } catch (error) {
+       const message = error instanceof Error ? error.message : String(error);
+       return {
+@@ -737,7 +737,7 @@ var ExactCasperScheme3 = class {
+     }
+     try {
+       const args = buildTransferWithAuthorizationArgs(p);
+-      const transaction = new import_casper_js_sdk.default.ContractCallBuilder().from(facilitatorPublicKey).byPackageHash(requirements.asset).entryPoint("transfer_with_authorization").runtimeArgs(args).chainName(chainNameFromNetwork(networkConfig.chainName)).payment(this.config?.limitedPaymentMotes ?? DEFAULT_PAYMENT_MOTES).build();
++      const transaction = new (import_casper_js_sdk.default || import_casper_js_sdk).ContractCallBuilder().from(facilitatorPublicKey).byPackageHash(requirements.asset).entryPoint("transfer_with_authorization").runtimeArgs(args).chainName(chainNameFromNetwork(networkConfig.chainName)).payment(this.config?.limitedPaymentMotes ?? DEFAULT_PAYMENT_MOTES).build();
+       await this.signer.signTransaction(transaction, network);
+       const transactionHash = await this.signer.putTransaction(network, transaction);
+       await this.signer.waitForTransaction(network, transactionHash);
+@@ -761,28 +761,28 @@ var ExactCasperScheme3 = class {
+   }
+ };
+ function buildTransferWithAuthorizationArgs(payload) {
+-  const fromKey = import_casper_js_sdk.default.Key.newKey("account-hash-" + payload.authorization.from.slice(2));
+-  const toKey = import_casper_js_sdk.default.Key.newKey("account-hash-" + payload.authorization.to.slice(2));
++  const fromKey = (import_casper_js_sdk.default || import_casper_js_sdk).Key.newKey("account-hash-" + payload.authorization.from.slice(2));
++  const toKey = (import_casper_js_sdk.default || import_casper_js_sdk).Key.newKey("account-hash-" + payload.authorization.to.slice(2));
+   const signatureBytes = hexToBytes2(payload.signature);
+   const nonceBytes = hexToBytes2(payload.authorization.nonce);
+-  const publicKey = import_casper_js_sdk.default.PublicKey.fromHex(payload.publicKey);
++  const publicKey = (import_casper_js_sdk.default || import_casper_js_sdk).PublicKey.fromHex(payload.publicKey);
+   const args = {
+-    from: import_casper_js_sdk.default.CLValue.newCLKey(fromKey),
+-    to: import_casper_js_sdk.default.CLValue.newCLKey(toKey),
+-    amount: import_casper_js_sdk.default.CLValue.newCLUInt256(payload.authorization.value),
+-    valid_after: import_casper_js_sdk.default.CLValue.newCLUint64(parseInt(payload.authorization.validAfter, 10)),
+-    valid_before: import_casper_js_sdk.default.CLValue.newCLUint64(parseInt(payload.authorization.validBefore, 10)),
+-    nonce: import_casper_js_sdk.default.CLValue.newCLList(
+-      import_casper_js_sdk.default.CLTypeUInt8,
+-      Array.from(nonceBytes).map((b) => import_casper_js_sdk.default.CLValue.newCLUint8(b))
++    from: (import_casper_js_sdk.default || import_casper_js_sdk).CLValue.newCLKey(fromKey),
++    to: (import_casper_js_sdk.default || import_casper_js_sdk).CLValue.newCLKey(toKey),
++    amount: (import_casper_js_sdk.default || import_casper_js_sdk).CLValue.newCLUInt256(payload.authorization.value),
++    valid_after: (import_casper_js_sdk.default || import_casper_js_sdk).CLValue.newCLUint64(parseInt(payload.authorization.validAfter, 10)),
++    valid_before: (import_casper_js_sdk.default || import_casper_js_sdk).CLValue.newCLUint64(parseInt(payload.authorization.validBefore, 10)),
++    nonce: (import_casper_js_sdk.default || import_casper_js_sdk).CLValue.newCLList(
++      (import_casper_js_sdk.default || import_casper_js_sdk).CLTypeUInt8,
++      Array.from(nonceBytes).map((b) => (import_casper_js_sdk.default || import_casper_js_sdk).CLValue.newCLUint8(b))
+     ),
+-    public_key: import_casper_js_sdk.default.CLValue.newCLPublicKey(publicKey),
+-    signature: import_casper_js_sdk.default.CLValue.newCLList(
+-      import_casper_js_sdk.default.CLTypeUInt8,
+-      Array.from(signatureBytes).map((b) => import_casper_js_sdk.default.CLValue.newCLUint8(b))
++    public_key: (import_casper_js_sdk.default || import_casper_js_sdk).CLValue.newCLPublicKey(publicKey),
++    signature: (import_casper_js_sdk.default || import_casper_js_sdk).CLValue.newCLList(
++      (import_casper_js_sdk.default || import_casper_js_sdk).CLTypeUInt8,
++      Array.from(signatureBytes).map((b) => (import_casper_js_sdk.default || import_casper_js_sdk).CLValue.newCLUint8(b))
+     )
+   };
+-  return import_casper_js_sdk.default.Args.fromMap(args);
++  return (import_casper_js_sdk.default || import_casper_js_sdk).Args.fromMap(args);
+ }
+ 
+ // src/exact/facilitator/register.ts
+@@ -801,7 +801,7 @@ var import_casper_js_sdk2 = __toESM(require("casper-js-sdk"));
+ function sleep(ms) {
+   return new Promise((resolve) => setTimeout(resolve, ms));
+ }
+-var { KeyAlgorithm, PrivateKey, RpcClient, HttpHandler } = import_casper_js_sdk2.default;
++var { KeyAlgorithm, PrivateKey, RpcClient, HttpHandler } = (import_casper_js_sdk2.default || import_casper_js_sdk2);
+ function toClientCasperSigner(privateKey) {
+   const accountAddress = "00" + privateKey.publicKey.accountHash().toHex();
+   const publicKey = privateKey.publicKey.toHex();

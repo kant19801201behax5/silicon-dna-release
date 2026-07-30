@@ -246,7 +246,7 @@ GET https://rtt.phoenix-ai.work/api/v1/safe
 → { "safe": true, "p99_ms": 45, "revert_ratio": 0.04 }
 ```
 
-Currently settled on Base mainnet. Casper's own x402 Facilitator (`x402-facilitator.cspr.cloud`) launched natively on June 4, 2026 and supports testnet — migration is planned (see `ts-agent/x402-casper-pay.js`, prepared but not yet wired in).
+Currently settled on Base mainnet. The **native Casper x402 payer is built and verified** in `casper-agent/casper-x402/` — a clean `npm install && npm run selftest` signs a real EIP-712 authorization against the live facilitator's `casper:casper-test` scheme. Because Casper x402 settles in a CEP-18 stablecoin and signing needs no balance, it settles **automatically once the payer wallet holds that token — no code change to go live**. (Upstream `@make-software/casper-x402` v1.0.0 load-bug patched via patch-package.) The Base rail is left running untouched.
 
 ---
 
