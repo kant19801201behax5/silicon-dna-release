@@ -246,7 +246,7 @@ GET https://rtt.phoenix-ai.work/api/v1/safe
 → { "safe": true, "p99_ms": 45, "revert_ratio": 0.04 }
 ```
 
-Currently settled on Base mainnet. The **native Casper x402 payer is built and verified** in `casper-agent/casper-x402/` — a clean `npm install && npm run selftest` signs a real EIP-712 authorization against the live facilitator's `casper:casper-test` scheme. Because Casper x402 settles in a CEP-18 stablecoin and signing needs no balance, it settles **automatically once the payer wallet holds that token — no code change to go live**. (Upstream `@make-software/casper-x402` v1.0.0 load-bug patched via patch-package.) The Base rail is left running untouched.
+Currently settled on Base mainnet (the live rail). A native Casper x402 payer is scaffolded in `casper-agent/casper-x402/` — a clean `npm install && npm run selftest` signs a valid EIP-712 authorization for the `casper:casper-test` scheme (upstream package load-bug patched via patch-package). It is **not production-live yet**: a standalone skeleton, not wired into the agent, not yet run end-to-end against the facilitator's `verify`/`settle`, and it needs a real CEP-18 asset + balance to actually pay. The Base rail is left untouched.
 
 ---
 

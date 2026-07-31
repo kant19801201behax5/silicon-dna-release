@@ -9,22 +9,27 @@ supports `casper:casper-test`). Casper x402 settles in a **CEP-18 stablecoin**
 authorized via an **EIP-712 signature** — the facilitator submits
 `transfer_with_authorization` on the token contract.
 
-## Status: wired and verified — settles the moment the wallet is funded
+## Status: signing skeleton — client-side signing verified, NOT yet production-live
 
-Signing a payment authorization needs **no balance**; only the final settlement
-moves the token. So this payer is fully functional today — verified end to end
-except for holding the CEP-18 asset.
+Signing a payment authorization needs **no balance** (only the final settlement
+moves the token), so the signing half is verifiable now:
 
 ```bash
 npm install       # postinstall applies the upstream patch (see below)
-npm run selftest  # signs a real Casper x402 authorization and prints it
+npm run selftest  # signs a Casper x402 authorization and prints it
 ```
 
-`selftest` output is a real signed `authorization` (`from / to / value /
-validAfter / validBefore / nonce` + signature). **To go live there is no code
-to write** — fund the payer wallet with the CEP-18 asset, set `CASPER_X402_ASSET`
-to that token's package hash, point `payAndFetch()` at a Casper-x402 resource,
-and settlement happens automatically.
+`selftest` output is a valid signed `authorization` (`from / to / value /
+validAfter / validBefore / nonce` + signature), using a **placeholder asset**.
+
+**What is NOT done yet** (don't read the self-test as "production-ready"):
+- not wired into the agent (`agent.js` still pays via the Base rail),
+- never run end-to-end through the facilitator's `verify` / `settle`,
+- no real CEP-18 asset/balance.
+
+To actually settle: fund the payer wallet with a real CEP-18 stablecoin, set
+`CASPER_X402_ASSET` to that token's package hash, point `payAndFetch()` at a real
+Casper-x402 resource, and run it end-to-end against the facilitator once.
 
 ## Upstream patch (why `patches/` exists)
 
