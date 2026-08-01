@@ -1,5 +1,6 @@
 
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createMlKem768 } from 'mlkem';
@@ -29,6 +30,13 @@ async function startServer() {
   const wss = new WebSocketServer({ server });
 
   const PORT = Number(process.env.PORT) || 3000;
+
+  // CodeQL "Missing rate limiting" (alerts #1-3): /api/enclave does real crypto work
+  // (HMAC verification, key ratchet) per request; the admin/reset and SPA-catch-all
+  // routes both touch the filesystem on every hit. None were rate-limited before.
+  const enclaveLimiter = rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: true, legacyHeaders: false });
+  const adminLimiter    = rateLimit({ windowMs: 60_000, limit: 30,  standardHeaders: true, legacyHeaders: false });
+  const staticLimiter   = rateLimit({ windowMs: 60_000, limit: 300, standardHeaders: true, legacyHeaders: false });
 
   let mode: 'IDLE' | 'STRESS' | 'SNIPER' = 'IDLE';
   const startTime = Date.now();
@@ -523,7 +531,7 @@ async function startServer() {
   });
 
   // ── /api/enclave (Protected) ───────────────────────────────────────────────
-  app.get('/api/enclave', sniperFilter, microStallMiddleware, (req, res) => {
+  app.get('/api/enclave', enclaveLimiter, sniperFilter, microStallMiddleware, (req, res) => {
     const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
     const pow = verifiedPoW.get(ip);
 
@@ -876,7 +884,7 @@ async function startServer() {
   });
 
   // Demo/test helper — clears in-memory + on-disk bans (localhost only)
-  app.post('/api/admin/reset-bans', (req, res) => {
+  app.post('/api/admin/reset-bans', adminLimiter, (req, res) => {
     const ip = req.socket.remoteAddress ?? '';
     if (ip !== '127.0.0.1' && ip !== '::1' && ip !== '::ffff:127.0.0.1') {
       res.status(403).end(); return;
@@ -1110,7 +1118,7 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
+    app.get('*', staticLimiter, (req, res) => res.sendFile(path.join(distPath, 'index.html')));
   }
 
   server.listen(PORT, '0.0.0.0', () => {
