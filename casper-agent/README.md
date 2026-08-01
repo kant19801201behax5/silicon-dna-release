@@ -211,16 +211,21 @@ full story, including the two earlier failed deploy attempts and why.
 `bin/cli.rs` requests 500 CSPR gas — 200 CSPR genuinely ran out of gas on the first
 real attempt (documented in CHECKLIST.md), so don't lower this without re-testing.
 
-Currently holds default state — wiring the existing agent to call `publish()` on a
-cycle is the next step, not done yet.
+Wired (2026-07-30): `ts-agent/publish_gate.js` calls `publish()` every 15 min (cron,
+separate from the oracle's `update()` loop). First on-chain publish verified — deploy
+`5e5a89bc…` executed Success, `is_settlement_allowed()` now returns true — so the gate
+holds live state, not default.
 
 ### On CSPR.click — checked, deliberately not used
 
 Of the five components in Casper's promoted AI toolkit (x402, MCP servers, CSPR.click
-Agent Skill, CSPR.cloud API, Odra), this repo genuinely uses four: **x402** (payment
-gateway), **MCP** (`mcp-server/`), **CSPR.cloud** (deploys `rwa-settlement-gate/`), and
-**Odra** (`rwa-settlement-gate/`). CSPR.click is the exception, and it's a deliberate
-one: its own SDK reference lists 24 methods (`init`, `connect`, `signIn`,
+Agent Skill, CSPR.cloud API, Odra), this repo genuinely uses three: **x402** (payment
+gateway), **MCP** (`mcp-server/`), and **Odra** (`rwa-settlement-gate/`). **CSPR.cloud**
+was tested — the API key is confirmed working against the x402 facilitator — but is not
+wired into the deploy path: `odra-casper-livenet-env` 2.9.0 never sends the
+`CSPR_CLOUD_AUTH_TOKEN` header, so every CSPR.cloud RPC 401s (see above) and the
+`rwa-settlement-gate` deploy runs against the official testnet node instead. CSPR.click
+is the last one, and it's a deliberate exclusion: its own SDK reference lists 24 methods (`init`, `connect`, `signIn`,
 `getActiveAccount`, `sign`, …), and every one of them requires a connected browser
 wallet extension or CSPR.click's own UI — there is no headless/server-side call path.
 This project's agent is an unattended, 24/7 server process signing with its own local
@@ -241,7 +246,7 @@ GET https://rtt.phoenix-ai.work/api/v1/safe
 → { "safe": true, "p99_ms": 45, "revert_ratio": 0.04 }
 ```
 
-Currently settled on Base mainnet. Casper's own x402 Facilitator (`x402-facilitator.cspr.cloud`) launched natively on June 4, 2026 and supports testnet — migration is planned (see `ts-agent/x402-casper-pay.js`, prepared but not yet wired in).
+Currently settled on Base mainnet (the live rail). A native Casper x402 payer is scaffolded in `casper-agent/casper-x402/` — a clean `npm install && npm run selftest` signs a valid EIP-712 authorization for the `casper:casper-test` scheme (upstream package load-bug patched via patch-package). It is **not production-live yet**: a standalone skeleton, not wired into the agent, not yet run end-to-end against the facilitator's `verify`/`settle`, and it needs a real CEP-18 asset + balance to actually pay. The Base rail is left untouched.
 
 ---
 

@@ -1,0 +1,21 @@
+{
+  "name": "phoenix-casper-x402",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Native Casper x402 payer for Phoenix Zero — settles in a CEP-18 stablecoin via the live Casper facilitator.",
+  "main": "pay.js",
+  "scripts": {
+    "postinstall": "patch-package",
+    "selftest": "node pay.js"
+  },
+  "dependencies": {
+    "@make-software/casper-x402": "1.0.0",
+    "casper-js-sdk": "^5.0.12",
+    "@x402/core": "2.15.0",
+    "@casper-ecosystem/casper-eip-712": "1.2.1",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "patch-package": "^8.0.0"
+  }
+}
