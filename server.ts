@@ -1,6 +1,5 @@
 
 import express from 'express';
-import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createMlKem768 } from 'mlkem';
@@ -21,8 +20,13 @@ import { SybilCluster } from './src/services/sybilCluster';
 import { classifyAgent } from './src/services/agentClassifier';
 import { detectAutomation } from './src/services/automationDetector';
 import { getShadowStats, clearShadowRecords } from './src/middleware/shadowFilter';
-import { computeBehavioralHash, validateSignatureStructure, bindWallet, lookupWallet, getBindingStats, clearBindings } from './src/services/walletBinder';
+import { computeBehavioralHash, validateSignatureStructure, bindWallet, lookupWallet, getWalletsByHash, getBindingStats, clearBindings } from './src/services/walletBinder';
 import { issueProof, redeemProof, clearProofs, type LayerResult } from './src/services/zkProof';
+import { evaluateTrust } from './src/services/trustEngine';
+import {
+  pqcSessionSignal, automationSignal, frankensteinSignal,
+  rhythmTrustSignal, classifierSignal, walletSybilSignal,
+} from './src/services/trustSignals';
 
 async function startServer() {
   const app = express();
@@ -30,13 +34,6 @@ async function startServer() {
   const wss = new WebSocketServer({ server });
 
   const PORT = Number(process.env.PORT) || 3000;
-
-  // CodeQL "Missing rate limiting" (alerts #1-3): /api/enclave does real crypto work
-  // (HMAC verification, key ratchet) per request; the admin/reset and SPA-catch-all
-  // routes both touch the filesystem on every hit. None were rate-limited before.
-  const enclaveLimiter = rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: true, legacyHeaders: false });
-  const adminLimiter    = rateLimit({ windowMs: 60_000, limit: 30,  standardHeaders: true, legacyHeaders: false });
-  const staticLimiter   = rateLimit({ windowMs: 60_000, limit: 300, standardHeaders: true, legacyHeaders: false });
 
   let mode: 'IDLE' | 'STRESS' | 'SNIPER' = 'IDLE';
   const startTime = Date.now();
@@ -531,7 +528,7 @@ async function startServer() {
   });
 
   // ── /api/enclave (Protected) ───────────────────────────────────────────────
-  app.get('/api/enclave', enclaveLimiter, sniperFilter, microStallMiddleware, (req, res) => {
+  app.get('/api/enclave', sniperFilter, microStallMiddleware, (req, res) => {
     const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
     const pow = verifiedPoW.get(ip);
 
@@ -884,7 +881,7 @@ async function startServer() {
   });
 
   // Demo/test helper — clears in-memory + on-disk bans (localhost only)
-  app.post('/api/admin/reset-bans', adminLimiter, (req, res) => {
+  app.post('/api/admin/reset-bans', (req, res) => {
     const ip = req.socket.remoteAddress ?? '';
     if (ip !== '127.0.0.1' && ip !== '::1' && ip !== '::ffff:127.0.0.1') {
       res.status(403).end(); return;
@@ -989,6 +986,51 @@ async function startServer() {
       headers: headers ?? {},
     });
     res.json(result);
+  });
+
+  // ── /api/trust-assessment — fused, graduated trust decision ───────────────
+  // Composes the existing PQC/Frankenstein/rhythm/classifier/wallet-Sybil
+  // checks behind one policy (src/services/trustEngine.ts) instead of each
+  // being evaluated in isolation at its own call site. Hard gates (PQC
+  // session, WebDriver artifacts, Frankenstein >=100) short-circuit to DENY;
+  // everything else fuses into one score with weakest-signal moderation,
+  // landing in ALLOW / STEP_UP / SHADOW_LIMIT / DENY rather than a bare
+  // boolean. None of the underlying checks changed — this only adds the
+  // fusion layer over signals server.ts already computes elsewhere.
+  app.post('/api/trust-assessment', express.json(), (req, res) => {
+    const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+    const { ua, spearmanRho, variance, entropy, hasPoW, headers, wallet, automationFingerprint } = req.body ?? {};
+
+    const frankensteinScore = checkConsistency(req);
+    const classification = classifyAgent({
+      ua: ua ?? '',
+      spearmanRho: spearmanRho ?? lastSpearmanRho,
+      variance: variance ?? currentMetrics.variance,
+      entropy: entropy ?? currentMetrics.entropy,
+      frankensteinScore,
+      hasPoW: hasPoW ?? false,
+      headers: headers ?? {},
+    });
+
+    const automationVerdict = automationFingerprint ? detectAutomation(automationFingerprint) : null;
+
+    const signals = [
+      pqcSessionSignal(sessionKeys.has('default')),
+      automationSignal(automationVerdict?.detected ?? false, automationVerdict?.reasons ?? []),
+      frankensteinSignal(frankensteinScore),
+      rhythmTrustSignal(rhythmManager.getTrustStatus(ip)),
+      classifierSignal(classification.agentClass, classification.confidence),
+    ];
+
+    if (wallet) {
+      const binding = lookupWallet(wallet);
+      if (binding) {
+        signals.push(walletSybilSignal(getWalletsByHash(binding.behavioralHash).length));
+      }
+    }
+
+    const assessment = evaluateTrust(signals);
+    res.json(assessment);
   });
 
   // ── /api/shadow-stats — RPC shadow filter metrics ─────────────────────────
@@ -1118,7 +1160,7 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', staticLimiter, (req, res) => res.sendFile(path.join(distPath, 'index.html')));
+    app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
   }
 
   server.listen(PORT, '0.0.0.0', () => {

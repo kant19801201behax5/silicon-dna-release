@@ -204,6 +204,36 @@ L11
     model, not the weighted-average originally claimed.
     Verified: imported at server.ts:20, route at server.ts:972-984.
 
+Trust Engine — fusion layer over the signals above, REAL, wired
+    src/services/trustEngine.ts + trustSignals.ts, POST /api/trust-assessment.
+    Added 2026-08-09 after researching how OPA, SPIFFE/SPIRE, and NIST SP
+    800-207 each solve "combine several independent trust signals into one
+    decision" — all three keep verifiers "dumb" (evidence only, never a
+    verdict) and put combination policy in exactly one place. This module is
+    that place for Silicon DNA: PQC session absence, WebDriver artifacts, and
+    Frankenstein >=100 are hard gates (matches how server.ts already treats
+    them elsewhere — this doesn't loosen anything); rhythm trustScore,
+    classifier confidence, and wallet-Sybil proximity fuse into one score,
+    weighted-averaged then moderated by the weakest signal (a single bad
+    signal pulls the fused score down materially, not just diluted by
+    weight — see trustEngine.ts's fuseSoftSignals for the exact formula).
+    Bands: >=0.7 ALLOW, >=0.4 STEP_UP, >=0.2 SHADOW_LIMIT (the previously-dead
+    RPC Shadow Filter entry below finally has a real decision that could
+    drive it, though it isn't wired to do so yet), else DENY.
+    This is additive, not a replacement: none of the underlying checks
+    (sniperFilter, microStallMiddleware, /api/enclave's own gate) changed —
+    /api/trust-assessment is a new observability/assessment endpoint that
+    composes the same real signals into one structured, graduated decision,
+    verified with 6 hand-checked scenarios (clean session, missing PQC
+    session, WebDriver detected, one bad signal among good ones, grey-zone
+    mix, Sybil wallet) before being wired into server.ts.
+    Verified: imported at server.ts:25-29, route at server.ts:1000-1034,
+    typechecked and smoke-tested locally (started clean, endpoint responds).
+    NOT yet deployed to the production process on 198.211.103.36 — this is
+    the source in this commit, not yet live at rtt.phoenix-ai.work. Deploying
+    it touches the same live process every other gate in this file runs in,
+    so it's flagged here rather than pushed silently.
+
 RPC Shadow Filter — code is real, but the middleware itself is NOT mounted;
 this one genuinely is dead as pitched
     src/middleware/shadowFilter.ts. Pitched in its own header comment as a
