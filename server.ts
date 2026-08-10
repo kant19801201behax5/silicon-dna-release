@@ -15,7 +15,7 @@ import * as rhythmManager from './src/services/rhythmManager';
 import * as sealValidator from './src/services/sealValidator';
 import { shannonEntropy, calculateAutocorrelation, spearmanRankCorrelation } from './src/utils/math';
 import { argon2id } from 'hash-wasm';
-import { persistBan, persistProfile, loadActiveBans, loadProfile, logEvent } from './src/db/persist';
+import { persistBan, persistProfile, loadActiveBans, loadProfile, logEvent, clearBans } from './src/db/persist';
 import { SybilCluster } from './src/services/sybilCluster';
 import { classifyAgent } from './src/services/agentClassifier';
 import { detectAutomation } from './src/services/automationDetector';
@@ -889,9 +889,11 @@ async function startServer() {
     bannedIPs.clear();
     globalDroppedCount = 0;
     globalPassedCount = 0;
-    // Also wipe disk so bans don't reload on restart
-    const bansPath = path.join(process.cwd(), 'data', 'bans.json');
-    try { fs.writeFileSync(bansPath, '[]'); } catch { /* ignore */ }
+    // Was: raw fs.writeFileSync(bansPath, '[]') here, bypassing persist.ts's
+    // own _bans object — left stale in-memory entries that would get written
+    // back into the file (as the wrong array shape, see persist.ts's load
+    // guard) on the next persistBan() call. clearBans() owns this state.
+    clearBans();
     res.json({ ok: true, message: 'Bans cleared (memory + disk)' });
   });
 

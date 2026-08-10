@@ -20,7 +20,19 @@ type ProfileRecord = {
 
 let _bans: Record<string, BanRecord> = {};
 
-try { _bans = JSON.parse(fs.readFileSync(BANS_FILE, 'utf8')); } catch { /* fresh start */ }
+// Bug found 2026-08-10 while live-testing the new trust-assessment ban path:
+// bans.json on the production server held a stale "[]" (empty array, not "{}"),
+// so JSON.parse gave _bans an actual Array. `_bans[ip] = {...}` still "worked"
+// (arrays are objects; you can set arbitrary string keys), but JSON.stringify()
+// on an array only serializes numeric indices — every persistBan() call since
+// whenever that file got into this state was silently dropped on save. This
+// wasn't specific to the new code; every ban source in server.ts goes through
+// persistBan(), so no ban has actually survived a restart for as long as the
+// file was in this shape. Guard against it regardless of how it got there.
+try {
+  const parsed = JSON.parse(fs.readFileSync(BANS_FILE, 'utf8'));
+  _bans = (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
+} catch { /* fresh start */ }
 
 // Expire stale bans on load
 const _now = Date.now();
@@ -32,6 +44,18 @@ function _saveBans() {
   fs.writeFileSync(BANS_FILE, JSON.stringify(_bans), 'utf8');
 }
 _saveBans();
+
+// server.ts's /api/admin/reset-bans previously wrote a raw '[]' straight to
+// BANS_FILE itself, bypassing this module's own _bans object entirely — that
+// left stale entries sitting in memory here, ready to get written back into
+// the file (re-corrupting it to the same array-vs-object shape this file's
+// load guard now defends against) the next time any ban fired after a
+// "clear". Found the same day as that load-guard fix, same root cause: two
+// places owning the same on-disk state instead of one.
+export function clearBans(): void {
+  _bans = {};
+  _saveBans();
+}
 
 export function persistBan(ip: string, reason: string, ttlMs: number): void {
   const now = Date.now();
