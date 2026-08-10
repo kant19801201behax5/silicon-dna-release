@@ -81,6 +81,26 @@ breakdown — including one piece of code that's defined but *not* actually wire
 explicitly rather than glossed over — verified against the actual deployed code (imports, routes,
 and call sites, not just file presence) in [`../src/SILICON_DNA_LAYERS.md`](../src/SILICON_DNA_LAYERS.md).
 
+**Added 2026-08-09 — Trust Engine, a fusion layer over the checks above:** `src/services/trustEngine.ts`
++ `trustSignals.ts`, exposed via `POST /api/trust-assessment`. Every check described above was
+independently threshold-checked at its own call site; this adds one policy layer that combines them
+instead, modeled on how OPA, SPIFFE/SPIRE, and NIST SP 800-207 each solve "combine several
+independent trust signals into one decision" — verifiers stay evidence-only (none of sealValidator.ts,
+rhythmManager.ts, agentClassifier.ts, automationDetector.ts, or walletBinder.ts changed), and exactly
+one place now owns the combination policy. PQC-session-absence, WebDriver artifacts, and Frankenstein
+≥100 remain hard gates (unchanged from how the cascade above already treats them); the Golden Seal
+rhythm score, classifier confidence, and wallet-Sybil proximity fuse into one score instead, weighted
+then moderated by whichever signal is weakest — a single confident bot classification pulls the fused
+score down materially rather than being diluted by two good signals next to it, which a plain weighted
+average would allow. Produces a graduated `ALLOW`/`STEP_UP`/`SHADOW_LIMIT`/`DENY` decision instead of
+a bare pass/fail. Verified with 6 hand-checked scenarios before being wired in (clean session, missing
+PQC session, WebDriver detected, one bad signal among good ones, grey-zone mix, Sybil wallet) — each
+produced the expected band. Purely additive: no existing route's behavior changed. **Not yet deployed
+to the production process at rtt.phoenix-ai.work** — live in this repo's `server.ts`, typechecked and
+smoke-tested locally, CI-covered on every push, but the running server on 198.211.103.36 hasn't been
+restarted onto it yet. Full technical detail: [`../src/SILICON_DNA_LAYERS.md`](../src/SILICON_DNA_LAYERS.md)'s
+"Trust Engine" entry.
+
 There is also an HMAC-based commit-reveal proof ("ZK-lite" — not true zero-knowledge, all layer bits
 are visible in plaintext, disclosed as such): 8 boolean layer-pass results collapse into one HMAC
 commitment (`src/services/zkProof.ts`) that a caller can present later to prove "this session passed
