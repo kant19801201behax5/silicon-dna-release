@@ -1030,6 +1030,21 @@ async function startServer() {
     }
 
     const assessment = evaluateTrust(signals);
+
+    // Give the decision real teeth — matches every other detector in this file
+    // (Spearman/Frankenstein/PoW-forgery, see e.g. the bannedIPs.set() calls
+    // above): DENY actually bans, not just reports. Added 2026-08-10 after
+    // it shipped as assessment-only with no enforcement wired to it — this
+    // was a real gap, not a design choice, flagged and closed same day.
+    if (assessment.decision === 'DENY') {
+      const reason = assessment.reasons[0] ?? 'trust_assessment_deny';
+      globalDroppedCount++;
+      bannedIPs.set(ip, { reason, ts: Date.now() });
+      persistBan(ip, reason, 1000 * 60 * 60);
+      logEvent(ip, 'TRUST_ASSESSMENT_DENY', { fusedScore: assessment.fusedScore, reasons: assessment.reasons });
+      broadcastThreat(ip, 'TRUST_ASSESSMENT_DENY', { fusedScore: assessment.fusedScore, reasons: assessment.reasons });
+    }
+
     res.json(assessment);
   });
 

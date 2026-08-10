@@ -217,18 +217,35 @@ Trust Engine — fusion layer over the signals above, REAL, wired
     weighted-averaged then moderated by the weakest signal (a single bad
     signal pulls the fused score down materially, not just diluted by
     weight — see trustEngine.ts's fuseSoftSignals for the exact formula).
-    Bands: >=0.7 ALLOW, >=0.4 STEP_UP, >=0.2 SHADOW_LIMIT (the previously-dead
-    RPC Shadow Filter entry below finally has a real decision that could
-    drive it, though it isn't wired to do so yet), else DENY.
+    Bands: >=0.7 ALLOW, >=0.4 STEP_UP, >=0.2 SHADOW_LIMIT, else DENY.
     This is additive, not a replacement: none of the underlying checks
     (sniperFilter, microStallMiddleware, /api/enclave's own gate) changed —
-    /api/trust-assessment is a new observability/assessment endpoint that
-    composes the same real signals into one structured, graduated decision,
-    verified with 6 hand-checked scenarios (clean session, missing PQC
-    session, WebDriver detected, one bad signal among good ones, grey-zone
-    mix, Sybil wallet) before being wired into server.ts.
-    Verified: imported at server.ts:25-29, route at server.ts:1000-1034,
-    typechecked and smoke-tested locally (started clean, endpoint responds).
+    /api/trust-assessment composes the same real signals into one structured,
+    graduated decision, verified with 6 hand-checked scenarios (clean session,
+    missing PQC session, WebDriver detected, one bad signal among good ones,
+    grey-zone mix, Sybil wallet) before being wired into server.ts.
+    Corrected 2026-08-10, same day it shipped: first version only returned
+    the decision as JSON — a real gap, not a design choice, caught when asked
+    directly "what does this actually do for any program." DENY now writes to
+    `bannedIPs` the same way every other detector in this file already does
+    (matches the Spearman/Frankenstein/PoW-forgery ban call sites exactly —
+    bannedIPs.set + persistBan + logEvent + broadcastThreat). That connects
+    to something real: `/api/check-ip` (server.ts:802-810) already reads
+    `bannedIPs.has(ip)` for the x402 payment gateway to reject banned IPs
+    before they're asked to pay — verified end-to-end on a clean server
+    start: POST a WebDriver fingerprint to /api/trust-assessment, then
+    GET /api/check-ip?ip=<that IP> flips from false to true. It does NOT
+    connect to the Casper agent itself (ts-agent/agent.js) — that's a
+    separate system publishing network-safety data to the SequencerOracle
+    contract, unrelated to who can pay for Silicon DNA-gated API access.
+    Grepped casper-agent/ directly to confirm: zero references to
+    trustEngine/evaluateTrust/trust-assessment outside this file's own docs.
+    Verified: imported at server.ts:25-29, route at server.ts:1000-1050,
+    typechecked and smoke-tested locally (started clean, ban-then-check-ip
+    round-trip confirmed on a fresh process, not a stale one — the first
+    attempt at this test hit a leftover process from an earlier smoke test
+    and produced a false negative, caught by checking the log instead of
+    trusting the first result).
     NOT yet deployed to the production process on 198.211.103.36 — this is
     the source in this commit, not yet live at rtt.phoenix-ai.work. Deploying
     it touches the same live process every other gate in this file runs in,

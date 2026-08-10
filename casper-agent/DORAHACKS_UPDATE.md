@@ -95,7 +95,14 @@ score down materially rather than being diluted by two good signals next to it, 
 average would allow. Produces a graduated `ALLOW`/`STEP_UP`/`SHADOW_LIMIT`/`DENY` decision instead of
 a bare pass/fail. Verified with 6 hand-checked scenarios before being wired in (clean session, missing
 PQC session, WebDriver detected, one bad signal among good ones, grey-zone mix, Sybil wallet) — each
-produced the expected band. Purely additive: no existing route's behavior changed. **Not yet deployed
+produced the expected band. No existing route's behavior changed — but the first version shipped
+DENY as JSON output only, no real consequence, which is a real gap that was caught and closed same
+day: DENY now bans via `bannedIPs`, the exact mechanism every other detector in this file already
+uses, verified with a live ban-then-check round trip on a fresh process. That connects to something
+real — `/api/check-ip` already gates the x402 payment layer on `bannedIPs` — but it does **not**
+connect to the Casper agent itself (`ts-agent/agent.js`, which publishes network-safety data and has
+zero references to this engine, confirmed by grepping `casper-agent/` directly). This is a Layer 2
+(Silicon DNA identity gate) addition, not a Layer 1 (Casper oracle agent) one. **Not yet deployed
 to the production process at rtt.phoenix-ai.work** — live in this repo's `server.ts`, typechecked and
 smoke-tested locally, CI-covered on every push, but the running server on 198.211.103.36 hasn't been
 restarted onto it yet. Full technical detail: [`../src/SILICON_DNA_LAYERS.md`](../src/SILICON_DNA_LAYERS.md)'s
