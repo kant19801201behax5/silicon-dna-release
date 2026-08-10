@@ -102,10 +102,16 @@ uses, verified with a live ban-then-check round trip on a fresh process. That co
 real — `/api/check-ip` already gates the x402 payment layer on `bannedIPs` — but it does **not**
 connect to the Casper agent itself (`ts-agent/agent.js`, which publishes network-safety data and has
 zero references to this engine, confirmed by grepping `casper-agent/` directly). This is a Layer 2
-(Silicon DNA identity gate) addition, not a Layer 1 (Casper oracle agent) one. **Not yet deployed
-to the production process at rtt.phoenix-ai.work** — live in this repo's `server.ts`, typechecked and
-smoke-tested locally, CI-covered on every push, but the running server on 198.211.103.36 hasn't been
-restarted onto it yet. Full technical detail: [`../src/SILICON_DNA_LAYERS.md`](../src/SILICON_DNA_LAYERS.md)'s
+(Silicon DNA identity gate) addition, not a Layer 1 (Casper oracle agent) one. **Deployed to
+production 2026-08-10** and live at rtt.phoenix-ai.work — restarted onto it after backing up the
+previous `server.ts`, typechecking in the real production environment, and re-running the full
+ban/clear/ban cycle against the live domain (not just locally). That live test surfaced two real,
+pre-existing bugs in the ban-persistence layer — unrelated to this feature, but only found because
+of it: `data/bans.json` had silently stopped saving any ban (a stale array-shaped file meant every
+`persistBan()` call since some earlier point wrote to the wrong data type and got dropped on save),
+and `/api/admin/reset-bans` bypassed the module owning that state entirely. Both fixed the same day,
+verified with a live round-trip against production. Full technical detail:
+[`../src/SILICON_DNA_LAYERS.md`](../src/SILICON_DNA_LAYERS.md)'s
 "Trust Engine" entry.
 
 There is also an HMAC-based commit-reveal proof ("ZK-lite" — not true zero-knowledge, all layer bits

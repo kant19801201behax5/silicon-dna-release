@@ -246,10 +246,19 @@ Trust Engine — fusion layer over the signals above, REAL, wired
     attempt at this test hit a leftover process from an earlier smoke test
     and produced a false negative, caught by checking the log instead of
     trusting the first result).
-    NOT yet deployed to the production process on 198.211.103.36 — this is
-    the source in this commit, not yet live at rtt.phoenix-ai.work. Deploying
-    it touches the same live process every other gate in this file runs in,
-    so it's flagged here rather than pushed silently.
+    Deployed to production 2026-08-10: server.ts.bak_pre_trust_engine_20260810
+    kept as rollback, typechecked in the real prod environment before
+    restart, live cycle re-run against rtt.phoenix-ai.work post-restart.
+    That live run found two real, pre-existing bugs in the ban-persistence
+    layer (data/bans.json silently losing every ban since some earlier point
+    due to an array/object type mismatch; /api/admin/reset-bans bypassing
+    persist.ts's own state) — unrelated to this feature but only surfaced by
+    testing it end-to-end instead of stopping at "the endpoint responds."
+    Both fixed and deployed the same day (persist.ts.bak_pre_clearbans_20260810
+    kept as rollback); see that commit for the full mechanism. Post-deploy
+    sanity check: /api/wallet/stats, /api/shadow-stats, /api/classify, and
+    the unrelated casper-agent/silicon-dna-keepalive/phoenix-zero services
+    all confirmed still healthy.
 
 RPC Shadow Filter — code is real, but the middleware itself is NOT mounted;
 this one genuinely is dead as pitched
