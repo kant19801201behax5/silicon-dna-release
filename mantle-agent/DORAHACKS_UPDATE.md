@@ -5,7 +5,12 @@
 ---
 
 ## Vision (256 chars)
-Silicon DNA turns 14 months of live sequencer telemetry into investment-grade intelligence. 206K+ measurements. R²=0.998 causal model. Detected a 72.1% MEV war 3 minutes early. Now published on-chain via TuringOracle on Mantle Sepolia.
+Silicon DNA turns continuous live sequencer telemetry into investment-grade intelligence - running since 2026-03-15, ~258,700 measurements/day across 6 chains. Detected a 72.1% MEV war 3 minutes early. Now published on-chain via TuringOracle on Mantle Sepolia.
+
+*Corrected 2026-07-29: dropped "R²=0.998 causal model" from this vision line — that
+figure belongs to a causal-signal model confirmed running inside JARVIS (a separate
+trading agent on the same server), not to this oracle or the Mantle pusher. See the
+correction note in `src/CAUSAL_ENGINE.md` for the full explanation.*
 
 ---
 
@@ -21,7 +26,7 @@ Silicon DNA changes that.
 
 ### What We Built
 
-**14 months of continuous blockchain telemetry collection**, turned into a live causal intelligence system.
+**Continuous blockchain telemetry collection since 2026-03-15**, turned into a live causal intelligence system.
 
 **Phoenix Zero** probes 6 chains every 2 seconds:
 - Mantle, Arbitrum, Base, Optimism, zkSync, Casper (Ethereum L1 also probed separately for blob-fee/gas-pressure)
@@ -29,7 +34,7 @@ Silicon DNA changes that.
 
 **The Discovery: arb_revert_ratio as a leading indicator**
 
-After analyzing 206,000+ data points, we found that `arb_revert_ratio` (Arbitrum transaction revert ratio) is a **causal leading indicator** of cross-chain stress events:
+After analyzing a 206,040-record production feed snapshot, we found that `arb_revert_ratio` (Arbitrum transaction revert ratio) is a **causal leading indicator** of cross-chain stress events:
 
 ```
 Normal:    4–8%  (baseline)
@@ -37,9 +42,17 @@ Warning:  >15%   (MEV activity starting)
 MEV war:   72%   (May 31, 2026 — documented event)
 ```
 
-Causal model (online SGD regression, Pearson R²): **R²=0.998** at steady state (best-performing predictor is a gas-pressure-derived velocity term — see `src/CAUSAL_ENGINE.md` for method, exact configuration is not published)
+*Corrected 2026-07-29: the "causal model, R²=0.998" claim previously here has been
+removed — that SGD-regression/R²/ATE mechanism is real and running, but it's inside
+JARVIS (a separate trading agent on the same server, gating its own trades), not part
+of this oracle's code. See `src/CAUSAL_ENGINE.md` for the full correction. The
+revert-ratio threshold crossings above (4-8% baseline → >15% warning → 72% MEV war)
+are this project's own simple threshold logic, unaffected by that removal.*
 
-This signal precedes visible gas price spikes by **27 seconds** on average. That's the same edge that institutional MEV searchers have — but we measured it from first principles.
+This signal precedes visible gas price spikes by **27 seconds** on average, based on
+a separately-documented event (RTT spike → revert-ratio threshold crossing, May 17
+2026 — see the main [`README.md`](../README.md) proof section), not the SGD model
+above.
 
 ---
 
@@ -76,15 +89,25 @@ Node.js agent running on DO NYC1. Reads Silicon DNA state, pushes to Mantle cont
 
 ### Silicon DNA — Identity Layer
 
-Beyond network data, Silicon DNA classifies every web connection:
+*Corrected 2026-07-29: this section previously had its own copy of the fictional
+trust-score cutoffs and "Reputation → Anomaly detection → ... → Causal engine"
+pipeline — missed in an earlier pass that fixed the same claim elsewhere in this
+file. Real breakdown, with file/line citations: [`../src/SILICON_DNA_LAYERS.md`](../src/SILICON_DNA_LAYERS.md).*
 
-| Class | Trust | What It Means |
-|-------|-------|---------------|
-| HUMAN | >0.70 | Real browser user |
-| LEGIT_AGENT | >0.45 | Verified AI agent |
-| MALICIOUS_BOT | ≤0.45 | Adversarial, dropped |
+Beyond network data, Silicon DNA classifies every web connection via a real,
+separate 3-class classifier (`agentClassifier.ts`, `POST /api/classify`,
+additive scoring — different formula, not the cutoffs previously listed here):
+HUMAN / LEGIT_AGENT / MALICIOUS_BOT.
 
-12-layer pipeline: CPU jitter physics → ML-KEM-768 post-quantum → TLS fingerprint (currently a fixed placeholder value pending a real JA4 implementation — see note below) → Behavioral rhythm → Argon2 PoW → Reputation → Anomaly detection → Network telemetry → Causal engine.
+Per-visitor cascade: CPU jitter physics → ML-KEM-768 post-quantum → TLS
+fingerprint (currently a fixed placeholder value pending a real JA4
+implementation — see note below) → "Frankenstein" UA/header check → Argon2id
+PoW → session identity hash → PoW-difficulty cache → synthetic-rhythm detector
+→ Spearman stall detector → network telemetry gate. Separately: the 3-class
+classifier above, a "Golden Seal" timing-rhythm + entropy-seal protocol
+guarding `/api/enclave`, and EIP-191 wallet-Sybil binding. None of this feeds
+the Mantle pusher, which reads network telemetry only (see "Mantle Integration"
+above).
 
 Note on the TLS fingerprint layer: real JA4 fingerprinting requires reading the raw TLS ClientHello, which isn't visible to the origin server once traffic is proxied through Cloudflare (a paid Bot Management tier would expose it via headers). This layer is currently a fixed placeholder in the live code, honestly disclosed here rather than left silently implied as working.
 
@@ -95,7 +118,7 @@ Note on the TLS fingerprint layer: real JA4 fingerprinting requires reading the 
 ### Live Proof
 
 **Network monitoring:**
-- 206,000+ RTT measurements since March 15, 2026
+- Continuous RTT measurement since March 15, 2026 - ~258,700/day across 6 chains (measured off the live feed 2026-07-25); the May 31 study used a 206,040-record snapshot
 - Dashboard: https://phoenix-zero.vercel.app
 - Public feed: https://rtt.phoenix-ai.work/api/public-feed
 
@@ -120,7 +143,7 @@ Any agent reading our oracle paused at 01:07 — **8 minutes before the cascade*
 | Oracle server | Node.js, WebSocket, Worker Threads |
 | CPU jitter probe | Node.js `process.hrtime.bigint()` |
 | Post-quantum channel | ML-KEM-768 (NIST FIPS 203, `mlkem` npm) |
-| Causal model | SGD regression, Pearson R² |
+| Causal model | SGD regression, Pearson R² — real, live (R²=0.9983 at last check), but runs inside JARVIS, a separate system on the same server; not part of this repo's oracle/pusher code, see `src/CAUSAL_ENGINE.md` |
 | Dashboard | React + Vite |
 | Mantle contract | Solidity 0.8.20, Mantle Sepolia |
 | Mantle pusher | ethers v6, Node.js |
@@ -131,9 +154,9 @@ Any agent reading our oracle paused at 01:07 — **8 minutes before the cascade*
 
 ### Why This Wins Alpha & Data Track
 
-**vs. "Insight value" (15 pts):** arb_revert_ratio as a leading indicator is not in any public dataset. We discovered it through 14 months of continuous measurement.
+**vs. "Insight value" (15 pts):** arb_revert_ratio as a leading indicator is not in any public dataset. We discovered it through continuous measurement since 2026-03-15.
 
-**vs. "Data source quality" (15 pts):** 6 chains, 2-second granularity, 14 months continuous. Mantle-native data included. Not scraped — directly measured RTT from DO NYC1.
+**vs. "Data source quality" (15 pts):** 6 chains, 2-second granularity, continuous since 2026-03-15. Mantle-native data included. Not scraped — directly measured RTT from DO NYC1.
 
 **vs. "Investment utility" (12 pts):** 27-second lead time before MEV peaks. May 31 case study is documented and verifiable from our public feed.
 
@@ -163,12 +186,19 @@ go-to-market, not existing paying customers.
 https://github.com/kant19801201behax5/silicon-dna-release
 
 ```
-/                      — Silicon DNA core (probe-worker.mjs)
-/src/                  — Architecture documentation (readable)
+/server.ts             — Core Silicon DNA server, the real deployed implementation
+/                      — probe-worker.mjs, package.json, tsconfig.json (root project)
+/src/                  — services/middleware/db/utils (real source, not just docs)
+                          + architecture write-ups (SILICON_DNA_LAYERS.md, CAUSAL_ENGINE.md)
 /mantle-agent/         — Mantle Sepolia contract + pusher
 /casper-agent/         — Casper Agentic Buildathon integration
 /dist/                 — Live dashboard (React)
 ```
+
+*Corrected 2026-07-29: `/src/` used to say "Architecture documentation (readable)" — until today
+that's all it was, because `server.ts` and every file it imports from `src/services/` etc. lived
+only in a separate private repo, so the layer docs cited line numbers no one outside the team
+could open. Published the real files here the same day so those citations resolve for anyone.*
 
 ---
 

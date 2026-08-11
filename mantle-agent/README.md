@@ -16,12 +16,18 @@ Any Mantle DeFi protocol can call `is_legitimate()` to get real-time bot/human t
 
 ```
 Silicon DNA Server (DO NYC1)
-│  12-layer classification: HUMAN / LEGIT_AGENT / MALICIOUS_BOT
 │  Monitors: Mantle, Arbitrum, Base, Optimism, zkSync, Casper (6 chains; Ethereum L1 probed separately for blob-fee/gas-pressure)
+│  Publishes: /api/public-feed — per-chain RTT/revert-ratio/tension telemetry
 │
 ↓ mantle_pusher.js  (runs every 60s)
-│  Reads: trust_score, bot_ratio, mantle_safe, p99_ms
-│  Computes: human_traffic = trust > 60% AND bot_ratio < 40%
+│  Reads the public feed above (network telemetry, NOT the per-visitor bot-detection
+│  layers below — corrected 2026-07-29, this previously implied it read from the
+│  12-layer identity cascade, it does not).
+│  trust_bps     = (1 - avg_cross_chain_tension) * 10000
+│  bot_ratio_bps = arbitrum_revert_ratio * 10000
+│  human_traffic = trust_bps > 6000 AND bot_ratio_bps < 4000
+│  ("human_traffic"/"bot_ratio" here are network-congestion proxies, not a
+│  verdict about who is visiting the site — see note below the layer table.)
 │
 ↓ TuringOracle.sol (Mantle Sepolia)
    update(human_traffic, trust_bps, bot_ratio_bps, mantle_safe, p99_ms)
@@ -108,22 +114,35 @@ contract MyMantleProtocol {
 
 ---
 
-## Silicon DNA Layers (12-layer Turing Test)
+## Silicon DNA Layers (per-visitor bot-detection cascade)
+
+*Corrected 2026-07-29: L7/L10/L11 below previously described features that
+don't exist in the deployed code ("ML anomaly detection", "Causal engine
+R²=0.998", "Composite trust score [0.0-1.0]"). Full verified breakdown, with
+exact file/line citations, in
+[`../src/SILICON_DNA_LAYERS.md`](../src/SILICON_DNA_LAYERS.md) — table below
+trimmed to match it.*
 
 | Layer | What It Checks |
 |-------|---------------|
 | L0 | CPU jitter physics (sub-microsecond, cannot be faked by VMs) |
 | L1 | ML-KEM-768 quantum channel (NIST FIPS 203) |
 | L2 | TLS fingerprint vs bot library database — currently a fixed placeholder, real JA4 needs raw ClientHello access unavailable behind Cloudflare's free tier |
-| L3 | Behavioral rhythm (mouse events, timing patterns) |
-| L4 | Argon2 Proof-of-Work (200ms compute cost per session) |
-| L5 | Silicon Hash (session identity chain) |
-| L6 | Reputation cache (LRU history) |
-| L7 | ML anomaly detection (deviation from human baseline) |
-| L8 | Timing consistency (jitter variance over time) |
-| L9 | Network telemetry (Mantle RTT, revert ratio, sequencer) |
-| L10 | Causal engine (R²=0.998 predictive model) |
-| L11 | Composite Silicon DNA trust score [0.0–1.0] |
+| L3 | "Frankenstein" UA/header consistency check (independent ban trigger) |
+| L4 | Argon2id Proof-of-Work, with ASIC-spoof and slow-time replay guards |
+| L5 | Session identity hash: HMAC-SHA256 keyed by the L1 ML-KEM session key |
+| L6 | PoW difficulty cache (per-IP, adapts challenge cost — not a reputation score) |
+| L7 | Synthetic-rhythm variance/autocorrelation threshold (independent ban trigger, not an ML model) |
+| L8 | Spearman rank-correlation "static script" stall detector (independent ban trigger) |
+| L9 | Network telemetry gate (this project's own signal: `arb_revert_ratio`/`p99` — this is what `mantle_pusher.js` actually reads, see diagram above) |
+
+**Separately** (not part of the L0-L9 cascade, not read by `mantle_pusher.js`):
+a real 3-class HUMAN/LEGIT_AGENT/MALICIOUS_BOT classifier
+(`agentClassifier.ts`, `POST /api/classify`), a "Golden Seal" timing-rhythm +
+entropy-seal protocol guarding `/api/enclave`, and EIP-191 wallet-to-behavioral
+Sybil binding. None of these feed the Mantle oracle — TuringOracle's
+`trust_bps`/`bot_ratio_bps` come from L9's network telemetry only, per the
+diagram above. Full detail: [`../src/SILICON_DNA_LAYERS.md`](../src/SILICON_DNA_LAYERS.md).
 
 ---
 

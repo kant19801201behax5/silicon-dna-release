@@ -10,9 +10,13 @@
     "start": "node index.js"
   },
   "dependencies": {
+    "@hono/node-server": "^2.0.11",
     "@modelcontextprotocol/sdk": "^1.29.0"
   },
   "engines": {
     "node": ">=18"
+  },
+  "overrides": {
+    "@hono/node-server": "^2.0.11"
   }
 }

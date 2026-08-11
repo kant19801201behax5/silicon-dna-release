@@ -1,0 +1,2 @@
+[[contracts]]
+fqn = "rwa_settlement_gate::RwaSettlementGate"

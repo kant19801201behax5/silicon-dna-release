@@ -27,40 +27,56 @@ if (!CONTRACT_ADDRESS || !PRIVATE_KEY) {
   process.exit(1);
 }
 
-// Minimal ABI — only the functions we call
+// Minimal ABI — only the functions we call.
+//
+// FIX 2026-07-25: this list used to also declare
+//   'function update_count() external view returns (uint256)'
+// which does not exist on TuringOracle.sol. `update_count` is a FIELD of the state struct
+// (TuringOracle.sol:31), readable through `get_state()`, not a standalone getter — the contract
+// exposes exactly: update, get_state, is_legitimate, owner, staleness_seconds, transfer_ownership
+// (verified by compiling the contract with solc 0.8.24: 0 errors, 0 warnings, 6 ABI functions).
+// Nothing here called it, so the pusher worked — but anyone reading this ABI and calling
+// `oracle.update_count()` would have hit a decode failure against the deployed contract.
+// Read the counter via `(await oracle.get_state()).update_count` instead.
 const ABI = [
   'function update(bool human_traffic, uint256 trust_bps, uint256 bot_ratio_bps, bool mantle_safe, uint256 p99_ms) external',
   'function get_state() external view returns (tuple(bool human_traffic, uint256 trust_score_bps, uint256 bot_ratio_bps, bool mantle_safe, uint256 p99_ms, uint256 timestamp, uint256 update_count))',
-  'function update_count() external view returns (uint256)',
+  // Advertised in README as the DeFi-facing gate; declared here so the same ABI can be reused by readers.
+  'function is_legitimate() external view returns (bool)',
 ];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 async function fetchSiliconDNA() {
   const resp = await fetch(SIGNAL_URL, { signal: AbortSignal.timeout(10_000) });
   if (!resp.ok) throw new Error(`Signal fetch failed: ${resp.status}`);
-  const data = await resp.json();
+  const body = await resp.json();
 
-  // public-feed returns an array of chain objects: [{chain, p99_ms, stall, arb_revert_ratio, ...}, ...]
-  const chains = Array.isArray(data) ? data : (data.chains ?? []);
-  const mantle = chains.find(c => (c.chain ?? '').toLowerCase().includes('mantle'));
-  const arb    = chains.find(c => (c.chain ?? '').toLowerCase().includes('arb'));
+  // FIX 2026-07-29: the real API shape is { data: [{ts, arb_p99, mantle_p99, arb_revert,
+  // stall_prob, ...}], count, delay_s, probe, generated } — verified live. The previous
+  // code expected { chains: [{chain, p99_ms, stall, arb_revert_ratio, tension}] }, a shape
+  // that never existed on this endpoint. Every field lookup below was silently falling
+  // through to its hardcoded fallback on every single cycle since deployment — confirmed via
+  // journalctl: every logged push showed the exact fallback-derived constants
+  // (trust=9000bps bot=500bps p99=0ms), never a value that moved with real conditions.
+  const rows   = Array.isArray(body?.data) ? body.data : [];
+  const latest = rows.length > 0 ? rows[rows.length - 1] : null;
 
-  // Derive trust from overall network tension (avg RTT health across chains)
-  const avgTension = chains.length > 0
-    ? chains.reduce((s, c) => s + (c.tension ?? 0.1), 0) / chains.length
-    : 0.1;
-  const arb_revert = arb ? (arb.arb_revert_ratio ?? arb.revert_ratio ?? 0.05) : 0.05;
+  // stall_prob [0,1] is this feed's closest real analog to the old "tension" concept
+  // (higher = worse); no field named "tension" exists on this endpoint.
+  const stallProb  = latest?.stall_prob ?? 0.1;
+  const arb_revert = latest?.arb_revert ?? 0.05;
 
-  const trust_bps     = clamp(Math.round((1 - avgTension) * 10_000), 0, 10_000);
+  const trust_bps     = clamp(Math.round((1 - stallProb) * 10_000), 0, 10_000);
   const bot_ratio_bps = clamp(Math.round(arb_revert * 10_000), 0, 10_000);
 
   return {
     trust_bps,
     bot_ratio_bps,
-    // Bug-fix: compute AFTER trust/bot are derived, not from raw data fields
     human_traffic: trust_bps > 6_000 && bot_ratio_bps < 4_000,
-    mantle_safe:   mantle ? (mantle.p99_ms < 500 && !mantle.stall) : true,
-    p99_ms:        mantle ? Math.round(mantle.p99_ms ?? 0) : 0,
+    // No per-chain boolean "stall" field exists on this endpoint; using the same 500ms
+    // P99 threshold this codebase already applies elsewhere (server.ts's own network gate).
+    mantle_safe:   latest ? (latest.mantle_p99 ?? 0) < 500 : true,
+    p99_ms:        latest ? Math.round(latest.mantle_p99 ?? 0) : 0,
   };
 }
 

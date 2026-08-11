@@ -51,6 +51,28 @@ View any TX: `https://testnet.cspr.live/deploy/<TX_HASH>`
 
 ---
 
+## 3b. Verify the RWA Settlement Gate (second contract, Odra)
+
+A separate, additive contract — does not touch the oracle above. Deployed 2026-07-29.
+
+**Contract package:**
+```
+contract-package-fab9c0a11314515796efddc5f5f98e0681cbdc717a2787a75a313cb5cb42511d
+```
+
+**View on explorer:**
+https://testnet.cspr.live/contract-package/fab9c0a11314515796efddc5f5f98e0681cbdc717a2787a75a313cb5cb42511d
+
+**Deploy transaction:** `6dc5440f5516b9084700bfaa5fe7d63715a068c16dfcba3281994272a77b2a47`
+View: `https://testnet.cspr.live/transaction/6dc5440f5516b9084700bfaa5fe7d63715a068c16dfcba3281994272a77b2a47`
+
+You will see entry points: `init`, `publish`, `is_settlement_allowed`, `get_network_safe`,
+`get_identity_screening_active`, `get_last_update_ts`. Source and full build/deploy recipe:
+`rwa-settlement-gate/` — see the main [README.md](./README.md) (note: this contract needs
+`cargo-odra` + a current `binaryen`, a different toolchain from the raw-WASM oracle above).
+
+---
+
 ## 4. Read Live Oracle State via Public API
 
 The oracle's source data is publicly readable — no key required:
@@ -60,6 +82,35 @@ curl https://rtt.phoenix-ai.work/api/public-feed
 ```
 
 Returns a JSON array of recent readings, one object per ~1-minute tick, each with fields including `arb_p99`, `base_p99`, `arb_revert`, `base_revert`, `ts`, and per-chain z-scores. See the last entry's `ts` (Unix seconds) to confirm the feed is live.
+
+---
+
+## 4b. Verify the Silicon DNA Systems Beyond the Main Cascade
+
+Full breakdown: [`../src/SILICON_DNA_LAYERS.md`](../src/SILICON_DNA_LAYERS.md). Three of these are
+live on production right now, no key required:
+
+```bash
+# 3-class classifier (HUMAN/LEGIT_AGENT/MALICIOUS_BOT, real additive scoring)
+curl -X POST https://rtt.phoenix-ai.work/api/classify -H "Content-Type: application/json" \
+  -d '{"ua":"Mozilla/5.0","spearmanRho":0.5,"variance":3,"entropy":3,"frankensteinScore":0,"hasPoW":false}'
+# → {"agentClass":"HUMAN","confidence":0.8,"signals":[...]}
+
+# Wallet-Sybil binding stats (empty until a wallet actually binds via /api/wallet/bind)
+curl https://rtt.phoenix-ai.work/api/wallet/stats
+# → {"totalBound":0,"sybilGroups":0,"largestGroup":0}
+
+# RPC shadow-filter stats — verifiably always zero, on purpose: the endpoint is real but the
+# middleware that would populate it (shadowFilterMiddleware) is defined and never mounted
+# anywhere in the codebase. Listed here as a known, disclosed gap, not a working feature.
+curl https://rtt.phoenix-ai.work/api/shadow-stats
+# → {"tracked_ips":0,"throttled_ips":0,"total_requests":0,"bot_hits":0}
+```
+
+`/api/sync-pulse` (Golden Seal rhythm protocol) and `/api/enclave` (entropy-seal gate) both require
+an established PQC session first (`403 PQC_SESSION_NOT_ESTABLISHED` on a bare `curl`) — they're
+exercised by the live dashboard's own WebSocket handshake, not directly curl-able without replaying
+that handshake. Source: `src/services/rhythmManager.ts`, `src/services/sealValidator.ts`.
 
 ---
 
@@ -144,14 +195,63 @@ During the **May 31, 2026 MEV war**: `arb_revert_ratio` reached `0.721` → `saf
 
 ---
 
+## 9. Run the MCP Server (4 tools, incl. RWA + LLM)
+
+```bash
+cd casper-agent/mcp-server
+npm install
+node index.js
+```
+
+Speaks MCP over stdio — hangs waiting for a client, that's normal. Point Claude Desktop or
+any MCP client at it (see [mcp-server/README.md](./mcp-server/README.md) for the config).
+Four tools:
+
+| Tool | Needs a key? |
+|---|---|
+| `get_sequencer_safety` | No |
+| `get_oracle_state` | No |
+| `get_rwa_settlement_signal` | No — includes the calibrated Casper P99 threshold and live Kraken CSPR/USD liquidity, both free public APIs |
+| `explain_settlement_decision` | Optional — needs `OPENROUTER_API_KEY` (free key at openrouter.ai/keys) for the LLM explanation; returns `available: false` cleanly without one, everything else still works |
+
+mcp-server/README.md has real, live sample output for all four, including exact numbers from
+the actual verification runs.
+
+---
+
+## 10. Build and Run the Core Silicon DNA Server (the code behind sections 4/4b above)
+
+Added 2026-07-29: `server.ts` and everything under `src/services/`, `src/middleware/`,
+`src/db/`, `src/utils/` at the repo root are the actual, currently-deployed implementation
+that [`../src/SILICON_DNA_LAYERS.md`](../src/SILICON_DNA_LAYERS.md) cites by exact line
+number — not a description of it, the real file. CI builds and starts it on every push
+(`check-core-server` job); to do the same yourself:
+
+```bash
+git clone https://github.com/kant19801201behax5/silicon-dna-release
+cd silicon-dna-release
+npm install
+npx tsc --noEmit    # typecheck — should produce no output
+npm start           # or: npx tsx server.ts
+```
+
+Should print `Silicon DNA [L0_CORE] Active → http://localhost:3000` within a second or two.
+`curl http://localhost:3000/metrics` returns Prometheus-format metrics from your own local
+instance (separate from the production one at rtt.phoenix-ai.work).
+
+---
+
 ## Summary
 
 | What to check | Where |
 |---|---|
-| Active contract | testnet.cspr.live/contract/hash-2a7ebbc9... |
+| Active contract (oracle) | testnet.cspr.live/contract/hash-2a7ebbc9... |
 | Original contract (962 historical tx) | testnet.cspr.live/contract/hash-5e45d42c... |
+| RWA Settlement Gate (2nd contract, Odra) | testnet.cspr.live/contract-package/fab9c0a1... |
 | Agent wallet | testnet.cspr.live/account/020249... |
 | Live data | rtt.phoenix-ai.work/api/public-feed |
 | Dashboard | rtt.phoenix-ai.work/casper |
+| MCP server (4 tools) | `casper-agent/mcp-server/` |
+| Core server (buildable from clean clone) | `server.ts` + `src/` at repo root |
 | Demo video (general) | https://youtu.be/o-CQfiSfQ4o |
 | Demo video (Casper-specific, 52s) | https://youtu.be/KtTrz23B92w |
