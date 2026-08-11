@@ -18,6 +18,7 @@ require('dotenv').config();
 const fetch = require('node-fetch');
 const { DeployUtil, Keys } = require('casper-js-sdk');
 const { SpendingLimiter } = require('./spending-limit');
+const { appendVerdict } = require('./verdict_log');
 const fs = require('fs');
 
 const NODE_URL     = process.env.CASPER_NODE_URL   || 'https://node.testnet.casper.network/rpc';
@@ -139,6 +140,12 @@ async function runAgent() {
     const cycleStart = Date.now();
     try {
       const oracle = await fetchOracleState();
+
+      // Log every verdict unconditionally (safe or not, dry-run or executed)
+      // — this is the real, replayable history reputation_scorer.js scores
+      // against. Never skip this: a reputation built only from the calls
+      // the agent happened to act on would be selection-biased.
+      appendVerdict(Math.floor(Date.now() / 1000), oracle.safe, oracle.arbRevert, oracle.baseP99);
 
       if (!oracle.safe) {
         stats.paused++;
