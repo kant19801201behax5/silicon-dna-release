@@ -104,6 +104,15 @@ export class SybilCluster {
     return this.cohorts.get(record.cohortId)?.size ?? 1;
   }
 
+  /** Drops every record and cohort. Used by /api/admin/reset-bans so a reset
+   *  actually clears Sybil flags (otherwise a flagged IP stays blocked until
+   *  its 24h TTL, which surprised operators using reset as an unblock). */
+  clear(): void {
+    this.records.clear();
+    this.cohorts.clear();
+    this.cohortCounter = 0;
+  }
+
   getStats(): { total: number; cohorts: number; flagged: number } {
     let flagged = 0;
     for (const r of this.records.values()) if (r.flagged) flagged++;

@@ -111,16 +111,18 @@ L6  PoW Difficulty Profile Cache — REAL, per-IP, not a general "reputation" sc
     *how hard* the next PoW challenge is for a given IP based on past solve
     speed — it does not track a generic trust/reputation number.
 
-L7  Synthetic Rhythm Detector — REAL, but threshold logic, not an ML model
-    In `sniperFilter` (active only once the server is in SNIPER mode): computes
-    variance and lag-1 autocorrelation over the last 10-20 request timestamps
-    from one IP. Bans if `variance < liveRules.sigma2` (too perfectly regular —
-    a bot's fixed interval) OR `variance > 10 && |autocorr| < 0.1` (too random —
-    `Math.random()`-style jitter with no physical memory). This is explicit
-    threshold logic on two computed statistics, auto-calibrated every 5 minutes
-    from a rolling p10 of observed variance (`AUTO-CAL`) — **not** a trained or
-    online-updated SVM or any other ML model. An earlier version of this doc
-    called it one; that was aspirational, not a description of the shipped code.
+L7  Synthetic Rhythm Detector — REAL, scored (upgraded 2026-08-16), not an ML model
+    In `sniperFilter` (active only once the server is in SNIPER mode): over the
+    last 10-20 request timestamps from one IP it now calls the tested
+    `scoreBotRequest` (`src/sniper.ts`, 45 unit tests) — a multi-factor score of
+    σ² + interval-entropy + lag-1 autocorrelation + header signals; total ≥ 60 ⇒
+    synthetic, ban. The σ² threshold is `liveRules.sigma2`, auto-calibrated every
+    5 minutes from a rolling p10 of observed variance (`AUTO-CAL`). Before
+    2026-08-16 this was an inline variance-only check (`v < sigma2 || (v>10 &&
+    |r1|<0.1)`) and `src/sniper.ts` was tested but unwired; it is now the live
+    detector. Still explicit scoring on computed statistics — **not** a trained
+    or online-updated SVM. On block it also feeds L7.5 Sybil (`sybilCluster.flag`),
+    now wired into the detection path (was manual-endpoint-only before).
 
 L8  Spearman "Grey Zone" Stall Correlation — REAL, independent ban trigger
     `microStallMiddleware`: injects a small random server-side delay (5-30ms)
@@ -180,7 +182,10 @@ gates /api/enclave specifically
     HMAC-signed "entropy seal" header (sig/ts/seq) — sealValidator.ts checks
     a 5-second anti-replay window, strict sequence-number enforcement, and
     HMAC signature match; failure → immediate 403 ENTROPY_SEAL_INVALID,
-    independent of every other gate in this file. Low trustScore forces an
+    independent of every other gate in this file. Since 2026-08-16 a seal that
+    reuses an already-consumed sequence number (seq ≤ last accepted) is caught
+    before signature check and banned with an explicit 403 REPLAY_ATTACK (was
+    previously an unlabeled ENTROPY_SEAL_INVALID). Low trustScore forces an
     extra Argon2 PoW challenge (403 ACTIVE_INTERROGATION_REQUIRED) before
     the request is served.
     Verified: imported at server.ts:14-15, routes at server.ts:510-523,
@@ -260,21 +265,20 @@ Trust Engine — fusion layer over the signals above, REAL, wired
     the unrelated casper-agent/silicon-dna-keepalive/phoenix-zero services
     all confirmed still healthy.
 
-RPC Shadow Filter — code is real, but the middleware itself is NOT mounted;
-this one genuinely is dead as pitched
-    src/middleware/shadowFilter.ts. Pitched in its own header comment as a
-    zero-latency Alchemy/QuickNode-style shadow filter: pass every request
-    through immediately, classify in the background via classifyAgent(),
-    throttle (429) an IP after 5 consecutive MALICIOUS_BOT hits in a
-    1-minute window. `GET /api/shadow-stats` is a live endpoint
-    (server.ts:987-989) and `getShadowStats`/`clearShadowRecords` are
-    imported (server.ts:21) — but `shadowFilterMiddleware`, the only
-    function that ever writes to `shadowRecords`, is never imported or
-    passed to `app.use` anywhere in the codebase (grepped the whole repo,
-    one match: its own definition). `/api/shadow-stats` will always return
-    zeros. This is the genuinely-unwired case the 2026-07-29 second pass
-    was specifically checking for, in the opposite direction from the other
-    three entries here.
+RPC Shadow Filter — REAL and WIRED (fixed 2026-08-16; was dead before)
+    src/middleware/shadowFilter.ts. Zero-latency Alchemy/QuickNode-style
+    shadow filter: pass every request through immediately, classify in the
+    background via classifyAgent(), throttle (429) an IP after 5 consecutive
+    MALICIOUS_BOT hits in a 1-minute window. Until 2026-08-16 the
+    `shadowFilterMiddleware` was defined but never passed to `app.use`, so
+    `shadowRecords` was never written and `/api/shadow-stats` always returned
+    zeros — the genuinely-dead case the 2026-07-29 second pass flagged.
+    Now mounted: `app.use(shadowFilterMiddleware(ctx, getClientIp))` before the
+    routes, resolving IP through the trusted-proxy-aware `getClientIp` and
+    exempting control/observability paths (/metrics, /api/admin/*, /api/health,
+    /api/public-feed) so a flagged monitor IP can't 429 out the reset endpoint.
+    Verified live 2026-08-16 (local + prod redeploy): `/api/shadow-stats`
+    populates (`tracked_ips`>0).
 
 Wallet Identity Binding — REAL, wired
     src/services/walletBinder.ts. Binds an EIP-191 wallet address to an
@@ -310,8 +314,12 @@ anywhere," it's several real composite mechanisms instead of the one originally
 claimed. The interpretability of each individual piece is the point, not a
 limitation being apologized for.
 
-One correction is owed the other direction too: not everything wired into the
-codebase is doing something. The RPC Shadow Filter above is real code with a
-real pitch behind it, sitting unmounted. Listing it as inert is as important
-as listing the real gates as real — both are what "verified against the actual
-code" has to mean.
+One correction was owed the other direction too: not everything wired into the
+codebase was doing something. The RPC Shadow Filter above was real code with a
+real pitch behind it, sitting unmounted — and listing it as inert was as
+important as listing the real gates as real. **As of 2026-08-16 it is now
+mounted and live** (verified local + prod: `/api/shadow-stats` populates), so
+the one genuinely-dead entry is closed. The remaining honest non-gate is the L2
+TLS/JA3 placeholder, which stays a declared placeholder (raw ClientHello bytes
+aren't available behind Cloudflare) — a conscious stub, not dead code. That's
+what "verified against the actual code" has to mean.

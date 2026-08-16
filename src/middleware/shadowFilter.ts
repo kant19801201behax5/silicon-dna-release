@@ -26,14 +26,32 @@ export interface ShadowFilterStats {
   bot_hits: number;
 }
 
+/**
+ * Safe default: trust ONLY the real TCP peer. x-forwarded-for is attacker-
+ * controlled, so it is never consulted unless the caller passes a
+ * trusted-proxy-aware `resolveIp` (server.ts passes `getClientIp`). Same
+ * guarantee the hard-ban path has — a spoofed header can't frame or evade
+ * the throttle.
+ */
+function defaultResolveIp(req: Request): string {
+  return req.socket.remoteAddress || 'unknown';
+}
+
+/**
+ * Control-plane / observability endpoints the throttle must never gate — else a
+ * single flagged monitoring/admin IP could 429 out /metrics or the very reset
+ * endpoint that clears the flag (self-inflicted deadlock).
+ */
+const SHADOW_EXEMPT = [/^\/metrics/, /^\/api\/admin\//, /^\/api\/silicon-metrics/, /^\/api\/phoenix-status/, /^\/api\/health/, /^\/api\/public-feed/, /^\/api\/check-ip/];
+
 export function shadowFilterMiddleware(
-  getContext: (req: Request) => Omit<ClassificationInput, 'ua' | 'headers'>
+  getContext: (req: Request) => Omit<ClassificationInput, 'ua' | 'headers'>,
+  resolveIp: (req: Request) => string = defaultResolveIp,
 ) {
   return (req: Request, res: Response, next: NextFunction): void => {
-    const ip =
-      ((req.headers['x-forwarded-for'] as string) ?? '').split(',')[0].trim() ||
-      req.socket.remoteAddress ||
-      'unknown';
+    if (SHADOW_EXEMPT.some(re => re.test(req.path))) { next(); return; }
+
+    const ip = resolveIp(req);
 
     const now = Date.now();
     let rec = shadowRecords.get(ip);

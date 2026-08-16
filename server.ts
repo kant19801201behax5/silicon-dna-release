@@ -17,9 +17,10 @@ import { shannonEntropy, calculateAutocorrelation, spearmanRankCorrelation } fro
 import { argon2id } from 'hash-wasm';
 import { persistBan, persistProfile, loadActiveBans, loadProfile, logEvent, clearBans } from './src/db/persist';
 import { SybilCluster } from './src/services/sybilCluster';
+import { scoreBotRequest, type RequestHeaders } from './src/sniper';
 import { classifyAgent } from './src/services/agentClassifier';
 import { detectAutomation } from './src/services/automationDetector';
-import { getShadowStats, clearShadowRecords } from './src/middleware/shadowFilter';
+import { shadowFilterMiddleware, getShadowStats, clearShadowRecords } from './src/middleware/shadowFilter';
 import { computeBehavioralHash, validateSignatureStructure, bindWallet, lookupWallet, getWalletsByHash, getBindingStats, clearBindings } from './src/services/walletBinder';
 import { issueProof, redeemProof, clearProofs, type LayerResult } from './src/services/zkProof';
 import { evaluateTrust } from './src/services/trustEngine';
@@ -34,6 +35,27 @@ async function startServer() {
   const wss = new WebSocketServer({ server });
 
   const PORT = Number(process.env.PORT) || 3000;
+
+  // ── TRUSTED PROXY / CLIENT IP RESOLUTION ────────────────────────────────────
+  // x-forwarded-for is attacker-controlled unless it arrives from a proxy we
+  // operate — trusting it blindly lets a bot evade its ban by rotating a fake
+  // header and lets an attacker frame an innocent IP. Only trust XFF when the
+  // real TCP peer is a known proxy (TRUSTED_PROXY_IPS). Behind nginx on the same
+  // host set TRUSTED_PROXY_IPS=127.0.0.1,::1 (see .env.example); unset ⇒ every
+  // route falls back to the real socket address.
+  const TRUSTED_PROXY_IPS = new Set(
+    (process.env.TRUSTED_PROXY_IPS || '').split(',').map(s => s.trim()).filter(Boolean)
+  );
+  function getClientIp(req: { headers: Record<string, unknown>; socket: { remoteAddress?: string } }): string {
+    const remote = req.socket.remoteAddress || 'unknown';
+    if (TRUSTED_PROXY_IPS.has(remote)) {
+      const xff = req.headers['x-forwarded-for'];
+      const raw = typeof xff === 'string' ? xff : Array.isArray(xff) ? xff[0] : '';
+      const first = raw?.split(',')[0]?.trim();
+      if (first) return first;
+    }
+    return remote;
+  }
 
   let mode: 'IDLE' | 'STRESS' | 'SNIPER' = 'IDLE';
   const startTime = Date.now();
@@ -201,7 +223,7 @@ async function startServer() {
   const microStallMiddleware = async (
     req: express.Request, res: express.Response, next: express.NextFunction
   ) => {
-    const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+    const ip = getClientIp(req);
 
     if (bannedIPs.has(ip)) {
       globalDroppedCount++;
@@ -295,9 +317,9 @@ async function startServer() {
   const sniperFilter = (
     req: express.Request, res: express.Response, next: express.NextFunction
   ) => {
-    const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+    const ip = getClientIp(req);
 
-    if (bannedIPs.has(ip)) {
+    if (bannedIPs.has(ip) || sybilCluster.isFlagged(ip)) {
       globalDroppedCount++;
       req.socket.destroy();
       return;
@@ -334,22 +356,37 @@ async function startServer() {
       for (let i = 1; i < timestamps.length; i++) {
         intervals.push(timestamps[i] - timestamps[i - 1]);
       }
-      const mean = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-      const v = intervals.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / intervals.length;
-      const r1 = calculateAutocorrelation(intervals);
 
-      // Perfect rhythm (bot) OR high variance with no autocorr memory (Math.random noise)
-      if (varianceSamples.length < MAX_SAMPLES) varianceSamples.push(v);
-      const isSynthetic = v < liveRules.sigma2 || (v > 10 && Math.abs(r1) < 0.1);
+      // Tested multi-factor SNIPER core (src/sniper.ts, 45 unit tests) — replaces
+      // the old inline variance-only heuristic. σ² + entropy + autocorr + header
+      // score; score ≥ 60 ⇒ synthetic. Same module the sniper.test.ts cases cover.
+      const headers: RequestHeaders = {
+        userAgent: req.headers['user-agent'] as string | undefined,
+        acceptLanguage: req.headers['accept-language'] as string | undefined,
+        secFetchMode: req.headers['sec-fetch-mode'] as string | undefined,
+        secFetchSite: req.headers['sec-fetch-site'] as string | undefined,
+      };
+      const score = scoreBotRequest(intervals, headers, liveRules.sigma2);
+      if (varianceSamples.length < MAX_SAMPLES) varianceSamples.push(score.variance);
 
-      if (isSynthetic) {
-        const reason = `Synthetic rhythm σ²=${v.toFixed(3)} R1=${r1.toFixed(3)}`;
+      // L2.5 Sybil: feed every fingerprint (clean traffic too) so a shared
+      // botnet signature can be told apart from an ordinary residential IP pool.
+      // Previously SybilCluster was instantiated but only reachable via manual
+      // admin endpoints — now it is live on the detection path.
+      sybilCluster.ingest(ip, {
+        entropy: score.entropy, variance: score.variance, autocorr: score.autocorr,
+        spearmanRho: lastSpearmanRho, requestIntervals: intervals,
+      });
+
+      if (score.blocked) {
+        const reason = `Synthetic rhythm score=${score.total} σ²=${score.variance.toFixed(3)} R1=${score.autocorr.toFixed(3)}`;
         bannedIPs.set(ip, { reason, ts: Date.now() });
         persistBan(ip, reason, 1000 * 60 * 60);
-        logEvent(ip, 'SYNTHETIC_RHYTHM', { variance: v, autocorr: r1 });
+        const cohortSize = sybilCluster.flag(ip);
+        logEvent(ip, 'SYNTHETIC_RHYTHM', { score: score.total, breakdown: score.breakdown, cohortSize });
         globalDroppedCount++;
-        broadcastThreat(ip, 'SYNTHETIC_RHYTHM', { variance: v, autocorr: r1 });
-        console.warn(`[SNIPER: DROP] ${reason}. IP: ${ip}`);
+        broadcastThreat(ip, 'SYNTHETIC_RHYTHM', { score: score.total, variance: score.variance, autocorr: score.autocorr, cohortSize });
+        console.warn(`[SNIPER: DROP] ${reason} cohort=${cohortSize}. IP: ${ip}`);
         req.socket.destroy();
         return;
       }
@@ -359,9 +396,25 @@ async function startServer() {
     next();
   };
 
+  // ── SHADOW FILTER (L7: agentClassifier, ~0ms overhead) ──────────────────────
+  // Was defined but never mounted (SYSTEM_MAP §7.2 flagged it dead — /api/shadow-stats
+  // always zeros). Now live: classifies HUMAN/LEGIT_AGENT/MALICIOUS_BOT in the
+  // background after the response is sent, and throttles an IP's *next* request
+  // once it racks up repeated malicious verdicts. Additive early-warning layer —
+  // never replaces the hard bans in sniperFilter/microStallMiddleware. Resolves
+  // IP via getClientIp (trusted-proxy aware) and exempts control/observability
+  // paths so a flagged monitor/admin IP can't lock out /metrics or reset.
+  app.use(shadowFilterMiddleware((req) => ({
+    spearmanRho: lastSpearmanRho,
+    variance: currentMetrics.variance,
+    entropy: currentMetrics.entropy,
+    frankensteinScore: checkConsistency(req),
+    hasPoW: verifiedPoW.has(getClientIp(req)),
+  }), getClientIp));
+
   // ── /api/challenge ─────────────────────────────────────────────────────────
   app.get('/api/challenge', (req, res) => {
-    const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+    const ip = getClientIp(req);
     const now = Date.now();
 
     if (now - globalPowGovernor.lastReset > 1000) {
@@ -381,7 +434,7 @@ async function startServer() {
 
   // ── /api/verify-pow ────────────────────────────────────────────────────────
   app.post('/api/verify-pow', express.json(), async (req, res) => {
-    const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+    const ip = getClientIp(req);
     const { hash, calcTime, m_cost, fp } = req.body;
     const challenge = pendingChallenges.get(ip);
 
@@ -513,7 +566,7 @@ async function startServer() {
 
   // ── /api/sync-pulse ────────────────────────────────────────────────────────
   app.get('/api/sync-pulse', (req, res) => {
-    const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'global';
+    const ip = getClientIp(req);
     const entry = sessionKeys.get('default');
     if (!entry) return res.status(403).json({ error: 'PQC_SESSION_NOT_ESTABLISHED' });
     const pulse = rhythmManager.generateSyncPulse(ip, entry.key);
@@ -521,15 +574,22 @@ async function startServer() {
   });
 
   app.post('/api/verify-rhythm', express.json(), (req, res) => {
-    const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'global';
-    const { timings } = req.body;
+    const ip = getClientIp(req);
+    const { timings, ramSalt } = req.body;
+    // §7.3 fix: the client's RAM-latency "software PUF" (rhythmWorker.ts ramDna)
+    // was sent as `ramSalt` but the server never read it. Now it's folded into the
+    // DNA noise pool as a real physical-entropy source for the quantum DNA hash.
+    if (Array.isArray(ramSalt)) {
+      const salt = ramSalt.map(Number).filter(Number.isFinite);
+      if (salt.length) updateNoise(salt);
+    }
     const result = rhythmManager.validateRhythm(ip, timings);
     res.json(result);
   });
 
   // ── /api/enclave (Protected) ───────────────────────────────────────────────
   app.get('/api/enclave', sniperFilter, microStallMiddleware, (req, res) => {
-    const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+    const ip = getClientIp(req);
     const pow = verifiedPoW.get(ip);
 
     const sealHeader = req.headers['x-silicon-dna-seal'] as string;
@@ -538,7 +598,26 @@ async function startServer() {
 
     if (!entry) return res.status(403).json({ error: 'PQC_SESSION_NOT_ESTABLISHED' });
 
-    const expectedSeq = (packetSequences.get(ip) || 0) + 1;
+    const lastSeq = packetSequences.get(ip) || 0;
+    const expectedSeq = lastSeq + 1;
+
+    // L5 anti-replay: a captured seal carries the sequence number it was minted
+    // for. Reusing one whose seq was already consumed (seq ≤ lastSeq) is a replay
+    // — ban it explicitly with a REPLAY_ATTACK label rather than letting it fall
+    // through as a generic seal failure. Only fires once a session has advanced
+    // (lastSeq>0), so a legitimate retry at the current seq is never mislabeled.
+    let claimedSeq: unknown = null;
+    try { claimedSeq = JSON.parse(Buffer.from(sealHeader || '', 'base64').toString('utf-8'))?.seq; } catch { /* verifyEntropySeal handles malformed */ }
+    if (lastSeq > 0 && typeof claimedSeq === 'number' && claimedSeq <= lastSeq) {
+      const reason = `REPLAY_ATTACK seq=${claimedSeq} ≤ consumed=${lastSeq}`;
+      bannedIPs.set(ip, { reason, ts: Date.now() });
+      persistBan(ip, reason, 1000 * 60 * 60);
+      logEvent(ip, 'REPLAY_ATTACK', { claimedSeq, lastSeq });
+      broadcastThreat(ip, 'REPLAY_ATTACK', { seq: claimedSeq, consumed: lastSeq });
+      globalDroppedCount++;
+      console.warn(`[SNIPER: KILL] ${reason}. IP: ${ip}`);
+      return res.status(403).json({ error: 'REPLAY_ATTACK' });
+    }
 
     // sessionId='default' matches client generateSeal which prefixes 'default'
     const { valid, requiresArgon2 } = sealValidator.verifyEntropySeal(
@@ -577,7 +656,7 @@ async function startServer() {
 
   // ── /api/wallet (Protected) ────────────────────────────────────────────────
   app.get('/api/wallet', sniperFilter, microStallMiddleware, (req, res) => {
-    const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+    const ip = getClientIp(req);
     const pow = verifiedPoW.get(ip);
     if (sniperArmed && !pow) return res.status(403).json({ error: 'ACTIVE_INTERROGATION_REQUIRED' });
     res.json({ asset: 'Crypto_Wallet', status: 'PROTECTED', dna: currentMetrics.dnaHash });
@@ -725,7 +804,7 @@ async function startServer() {
   const _kemInit = createMlKem768();
 
   wss.on('connection', (ws, req) => {
-    const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+    const ip = getClientIp(req);
     lastClientIp = ip;
 
     // Generate real ML-KEM-768 keypair per connection (pk=1184B, sk=2400B)
@@ -887,14 +966,19 @@ async function startServer() {
       res.status(403).end(); return;
     }
     bannedIPs.clear();
-    globalDroppedCount = 0;
-    globalPassedCount = 0;
     // Was: raw fs.writeFileSync(bansPath, '[]') here, bypassing persist.ts's
     // own _bans object — left stale in-memory entries that would get written
     // back into the file (as the wrong array shape, see persist.ts's load
     // guard) on the next persistBan() call. clearBans() owns this state.
     clearBans();
-    res.json({ ok: true, message: 'Bans cleared (memory + disk)' });
+    // Full reset: previously only bannedIPs was cleared, so a Sybil-flagged IP
+    // stayed blocked (24h TTL) and shadow throttles persisted despite "reset".
+    sybilCluster.clear();
+    clearShadowRecords();
+    requestLog.clear();
+    globalDroppedCount = 0;
+    globalPassedCount = 0;
+    res.json({ ok: true, message: 'Full reset: bans, sybil, shadow, timing (memory + disk)' });
   });
 
   // Expose Phoenix Zero state for dashboard + external reads
@@ -1000,7 +1084,7 @@ async function startServer() {
   // boolean. None of the underlying checks changed — this only adds the
   // fusion layer over signals server.ts already computes elsewhere.
   app.post('/api/trust-assessment', express.json(), (req, res) => {
-    const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+    const ip = getClientIp(req);
     const { ua, spearmanRho, variance, entropy, hasPoW, headers, wallet, automationFingerprint } = req.body ?? {};
 
     const frankensteinScore = checkConsistency(req);
@@ -1066,7 +1150,7 @@ async function startServer() {
 
   // ── /api/wallet/bind — on-chain wallet identity binding ───────────────────
   app.post('/api/wallet/bind', express.json(), (req, res) => {
-    const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+    const clientIp = getClientIp(req);
     const { wallet, signature, challenge } = req.body ?? {};
 
     if (!wallet || !signature || !challenge) {
@@ -1127,7 +1211,7 @@ async function startServer() {
 
   // ── /api/zk — ZK-lite proof generation and redemption ────────────────────
   app.post('/api/zk/issue', (req, res) => {
-    const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+    const clientIp = getClientIp(req);
     const sessionEntry = sessionKeys.get('default');
     const secret = sessionEntry?.key ?? crypto.randomBytes(32);
 

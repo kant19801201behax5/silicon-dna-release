@@ -500,6 +500,44 @@ Noted here explicitly so the near-miss is on record rather than silently absent.
 
 ---
 
+## Builds on Every Level — CI-Enforced From a Clean Clone (2026-08-16)
+
+A judge should be able to `git clone` and have every layer build. GitHub Actions
+(`.github/workflows/ci.yml`) enforces exactly that, so no level can silently rot:
+
+| CI job | Level | What it proves |
+|--------|-------|----------------|
+| `test-ts-agent` | Node autonomous agent | ts-agent test suite passes (agent + reputation scorer + verdict log) |
+| `build-contract` | Rust/WASM oracle | `casper-contract 5.1.1` vendored + patched (`prepare_patched_crate.sh`), builds `sequencer_oracle.wasm` (~145 KB) from a clean clone — the old absolute-path `[patch]` that broke fresh builds is gone |
+| `check-core-server` | Silicon DNA `server.ts` | `tsc --noEmit` clean + boots and answers `/metrics` within 10s |
+| `check-sdk-and-mcp` | TS SDK + MCP server + Mantle pusher | SDK typechecks; MCP answers `initialize` + `tools/list` (`get_sequencer_safety`); `mantle_pusher.js` syntax-checks |
+| `check-secrets` | whole repo | no `.env` / `.pem` committed |
+
+Verified locally 2026-08-16: ts-agent tests green, SDK `tsc` clean, MCP handshake + `get_sequencer_safety` OK, Mantle pusher + Python pusher compile, core `server.ts` `tsc` clean and boots.
+
+## Security Hardening — Applied and Deployed to Production (2026-08-16)
+
+An adversarial re-audit of the Silicon DNA identity gate (Layer 2) closed real
+gaps and one genuinely-dead layer. All of the below were applied to the running
+production server on DO NYC1, re-verified live (attacker→403, legit→200,
+replay→REPLAY_ATTACK, `/api/shadow-stats` populates) with the full suite green:
+
+- **X-Forwarded-For is no longer trusted blindly** — `getClientIp()` +
+  `TRUSTED_PROXY_IPS` replaced raw XFF in every ban/detection path (was
+  spoofable → ban-evasion by header rotation and framing of an innocent IP).
+  nginx is configured to *overwrite* XFF with the real peer, so behind the proxy
+  the resolved IP is authentic and unspoofable.
+- **RPC Shadow Filter is now mounted** — it was defined but never `app.use`'d
+  (dead; `/api/shadow-stats` always zero). Now live, IP-resolved via
+  `getClientIp`, exempting control/observability paths.
+- **Replay is banned explicitly** — reusing a consumed entropy-seal sequence
+  number now returns `403 REPLAY_ATTACK` (was an unlabeled seal failure).
+- **The tested SNIPER detector is now the live one** — `sniperFilter` calls
+  `scoreBotRequest` (`src/sniper.ts`, 45 tests) instead of an inline
+  variance-only check, and feeds the cross-IP `SybilCluster` on every request.
+- **`/api/admin/reset-bans` is a true full reset** — clears bans (memory+disk),
+  Sybil flags, shadow throttles, and timing history.
+
 ## How to Test (step by step)
 
 **1. Verify the active contract on Casper Testnet Explorer:**
