@@ -18,6 +18,7 @@ import { argon2id } from 'hash-wasm';
 import { persistBan, persistProfile, loadActiveBans, loadProfile, logEvent, clearBans } from './src/db/persist';
 import { SybilCluster } from './src/services/sybilCluster';
 import { scoreBotRequest, type RequestHeaders } from './src/sniper';
+import { resolveTlsFp, tlsRisk } from './src/services/tlsFingerprint';
 import { classifyAgent } from './src/services/agentClassifier';
 import { detectAutomation } from './src/services/automationDetector';
 import { shadowFilterMiddleware, getShadowStats, clearShadowRecords } from './src/middleware/shadowFilter';
@@ -124,6 +125,11 @@ async function startServer() {
 
   let lastClientIp = 'unknown'; // tracks last WS client for per-IP trustScore in metrics
   let lastSpearmanRho = 0.5;   // last computed ρ from microStall (fed into quantum DNA hash)
+  // L2 TLS fingerprint — populated only when a JA4-capable front sends x-tls-ja4
+  // from a trusted proxy; null (honest "unknown") otherwise. Replaces the old
+  // hardcoded ja3:0.5 that was never real.
+  let lastJa4: string | null = null;
+  let lastTlsRisk: number | null = null;
 
   type CurrentMetrics = {
     mean: number; variance: number; entropy: number; autocorr: number;
@@ -318,6 +324,11 @@ async function startServer() {
     req: express.Request, res: express.Response, next: express.NextFunction
   ) => {
     const ip = getClientIp(req);
+
+    // L2 TLS: consume a real JA4 from a trusted front (x-tls-ja4), never fabricate.
+    const fp = resolveTlsFp(req.headers as Record<string, unknown>,
+                            TRUSTED_PROXY_IPS.has(req.socket.remoteAddress || ''));
+    if (fp.ja4) { lastJa4 = fp.ja4; lastTlsRisk = tlsRisk(fp, (req.headers['user-agent'] as string) || ''); }
 
     if (bannedIPs.has(ip) || sybilCluster.isFlagged(ip)) {
       globalDroppedCount++;
@@ -867,6 +878,10 @@ async function startServer() {
       autocorr_norm:   (currentMetrics.autocorr + 1) / 2,
       trust_score:     currentMetrics.trustScore,
       banned_count:    bannedIPs.size,
+      // L2 TLS: real JA4 when a JA4-capable front is present, else null (honest —
+      // no fabricated constant). tls_risk is [0,1] or null when unknown.
+      tls_ja4:         lastJa4,
+      tls_risk:        lastTlsRisk,
       mode:            currentMetrics.mode,
       t:               Date.now(),
     });
@@ -1025,7 +1040,9 @@ async function startServer() {
       fetch(`${JARVIS_URL}/api/silicon-dna`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(process.env.JARVIS_TOKEN ? { 'Authorization': 'Bearer ' + process.env.JARVIS_TOKEN } : {}) },
-        body: JSON.stringify({ jitter, sniper, ja3: 0.5, behavioral: 0.5, trust, entropy_norm, autocorr_norm, bot_drop_rate }),
+        // ja3 kept for JARVIS schema back-compat but now carries the REAL TLS risk
+        // (from a JA4 front) when available; 0.5 is an honest "unknown", not a fake.
+        body: JSON.stringify({ jitter, sniper, ja3: lastTlsRisk ?? 0.5, ja4: lastJa4, behavioral: 0.5, trust, entropy_norm, autocorr_norm, bot_drop_rate }),
       }).catch((e: Error) => console.warn(`[DNA→JARVIS] ${e.message}`));
     }, 60_000);
   }

@@ -545,6 +545,16 @@ replay→REPLAY_ATTACK, `/api/shadow-stats` populates) with the full suite green
   Deployed as `phoenix-sensor.service`; verified live (metrics non-zero). Its
   pure functions are unit-tested (`tests/test_phoenix_sensor.py`, 22 cases) and
   CI-enforced (`test-l6-sensor` job), so L6 can't silently rot again.
+- **L2 TLS fingerprint is no longer a fake constant** — the old hardcoded
+  `ja3: 0.5` (never a real fingerprint; JA3 itself obsolete since Chrome 110) is
+  removed. `src/services/tlsFingerprint.ts` implements the FoxIO **JA4**
+  (ClientHello parser + `computeJA4`, GREASE-filtered, 21 unit tests) and the
+  server consumes a real JA4 from `x-tls-ja4` **only** from a trusted proxy,
+  exposing `tls_ja4`/`tls_risk` in `/api/silicon-metrics` — or **null** (honest
+  "unknown"), never a fabricated number. Behind vanilla Cloudflare the raw
+  ClientHello isn't visible, so on prod it reads null until a JA4 source (CF
+  Enterprise header or a direct TLS-peek front on the same `computeJA4`) is wired
+  — deployed-ready, honestly disclosed, not faked.
 
 ## How to Test (step by step)
 

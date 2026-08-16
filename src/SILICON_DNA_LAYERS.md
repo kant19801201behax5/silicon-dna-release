@@ -63,12 +63,18 @@ L1  ML-KEM-768 Channel (NIST FIPS 203) — REAL
     HMAC key for L5 below and is ratcheted (re-derived from accumulated client
     noise) every 50 packets on the protected `/api/enclave` endpoint.
 
-L2  TLS Fingerprint (JA3/JA4) — PLACEHOLDER, honestly disclosed as such
-    Fixed `ja3: 0.5` value, sent as-is to JARVIS's ingestion endpoint. JA3 is
-    obsolete since Chrome 110 randomized ClientHello extension order (Jan 2023);
-    real JA4 fingerprinting would need raw TLS ClientHello bytes, which aren't
-    available once traffic is proxied through Cloudflare without their paid Bot
-    Management tier. Not implemented — not claimed to be.
+L2  TLS Fingerprint (JA4) — REAL consumption path (2026-08-16), honest null otherwise
+    The fake fixed `ja3: 0.5` is gone. `src/services/tlsFingerprint.ts` implements
+    the FoxIO JA4 (parseClientHello + computeJA4, GREASE-filtered, 21 unit tests in
+    the private repo), and the server consumes a real JA4 from the `x-tls-ja4`
+    header ONLY when the request comes from a trusted proxy (`resolveTlsFp` — never
+    fabricated, never trusted from an arbitrary client). It computes `tlsRisk` and
+    exposes `tls_ja4` / `tls_risk` in /api/silicon-metrics (null = honest
+    "unknown"), and passes the real risk to JARVIS instead of the old constant.
+    JA3 stays obsolete (Chrome 110 randomised extension order, Jan 2023). Behind
+    vanilla Cloudflare the raw ClientHello isn't visible, so on prod `tls_ja4` is
+    null until a JA4 source is wired: Cloudflare Enterprise's JA4 header, or a
+    direct (non-CF) TLS-peek front built on the same `computeJA4`. Ready, not faked.
 
 L3  "Frankenstein" Consistency Check — REAL, independent ban trigger
     `checkConsistency()` scores User-Agent / `sec-ch-ua-platform` / `sec-fetch-mode`
