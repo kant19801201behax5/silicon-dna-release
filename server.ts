@@ -22,6 +22,7 @@ import { resolveTlsFp, tlsRisk } from './src/services/tlsFingerprint';
 import { jitterStats, jitterVerdict, type JitterVerdict } from './src/services/jitterProbe';
 import { verifyEip191, verifyAgentCredential, agentTrustDecision } from './src/services/agentIdentity';
 import { classifyAgent } from './src/services/agentClassifier';
+import { PrivacyPassIssuer } from './src/services/privacyPass';
 import { detectAutomation } from './src/services/automationDetector';
 import { shadowFilterMiddleware, getShadowStats, clearShadowRecords } from './src/middleware/shadowFilter';
 import { computeBehavioralHash, validateSignatureStructure, bindWallet, lookupWallet, getWalletsByHash, getBindingStats, clearBindings } from './src/services/walletBinder';
@@ -103,6 +104,12 @@ async function startServer() {
 
   // ── Sybil Cluster (cross-IP cohort detection) ──────────────────────────────
   const sybilCluster = new SybilCluster();
+
+  // ── Privacy Pass issuer (P1.6): OPRF(P-384) anonymous one-time tokens ───────
+  // A client solves ONE Argon2 PoW, exchanges it for a batch of blinded tokens,
+  // then redeems one per protected request instead of re-solving — cheaper and
+  // unlinkable. Key from env so it survives restarts; else ephemeral per boot.
+  const privacyPass = new PrivacyPassIssuer({ keyHex: process.env.PRIVACY_PASS_KEY });
 
   // ── PQC cooldown flag: jitter readings taken during ML-KEM CPU spike are discarded ──
   // ML-KEM-768 generateKeyPair() and decap() are CPU-intensive lattice operations.
@@ -602,6 +609,40 @@ async function startServer() {
     res.json({ status: 'VERIFIED', next_m_cost: profile.m_cost });
   });
 
+  // ── Privacy Pass (P1.6) ──────────────────────────────────────────────────────
+  // Public suite/key discovery — clients need the suite id to build tokens; the
+  // public key is only useful for a future verifiable (DLEQ) upgrade.
+  app.get('/api/pat/config', (_req, res) => res.json(privacyPass.config()));
+
+  // Issuance is GATED behind a currently-verified Argon2 PoW: tokens must be
+  // "paid for" once with real work, otherwise they'd be a free bypass. The server
+  // only sees blinded elements here, so issuance is unlinkable to later redemption.
+  app.post('/api/pat/issue', express.json(), (req, res) => {
+    const ip = getClientIp(req);
+    if (sniperArmed && !verifiedPoW.get(ip)) {
+      return res.status(403).json({ error: 'ACTIVE_INTERROGATION_REQUIRED' });
+    }
+    const blinded = req.body?.blindedElements;
+    if (!Array.isArray(blinded)) {
+      return res.status(400).json({ error: 'BLINDED_ELEMENTS_REQUIRED' });
+    }
+    try {
+      const evaluatedElements = privacyPass.issueBatch(blinded);
+      res.json({ evaluatedElements, issued: evaluatedElements.length });
+    } catch (err) {
+      return res.status(400).json({ error: 'ISSUE_FAILED', detail: (err as Error).message });
+    }
+  });
+
+  // Redeem a token as an alternative to re-solving PoW. Returns true on the first
+  // valid presentation of an unspent token; consumed thereafter (one-time).
+  function tryRedeemToken(req: express.Request): boolean {
+    const nonce = req.headers['x-privacy-pass-token'];
+    const output = req.headers['x-privacy-pass-output'];
+    if (typeof nonce !== 'string' || typeof output !== 'string') return false;
+    return privacyPass.redeem(nonce, output).valid;
+  }
+
   // ── /api/sync-pulse ────────────────────────────────────────────────────────
   app.get('/api/sync-pulse', (req, res) => {
     const ip = getClientIp(req);
@@ -689,7 +730,8 @@ async function startServer() {
 
     packetSequences.set(sid, expectedSeq);
 
-    if (sniperArmed && !pow && requiresArgon2) {
+    // A valid Privacy Pass token (P1.6) is a one-time substitute for re-solving PoW.
+    if (sniperArmed && !pow && requiresArgon2 && !tryRedeemToken(req)) {
       return res.status(403).json({ error: 'ACTIVE_INTERROGATION_REQUIRED' });
     }
 
@@ -700,7 +742,7 @@ async function startServer() {
   app.get('/api/wallet', sniperFilter, microStallMiddleware, (req, res) => {
     const ip = getClientIp(req);
     const pow = verifiedPoW.get(ip);
-    if (sniperArmed && !pow) return res.status(403).json({ error: 'ACTIVE_INTERROGATION_REQUIRED' });
+    if (sniperArmed && !pow && !tryRedeemToken(req)) return res.status(403).json({ error: 'ACTIVE_INTERROGATION_REQUIRED' });
     res.json({ asset: 'Crypto_Wallet', status: 'PROTECTED', dna: currentMetrics.dnaHash });
   });
 
@@ -929,6 +971,11 @@ async function startServer() {
       // L0 CPU-jitter verdict from the real micro-workload timings.
       jitter_verdict:  lastJitterVerdict,
       jitter_cv:       lastJitterCv,
+      // Privacy Pass (P1.6): anonymous one-time token issuance/redemption counters.
+      pat_issued:      privacyPass.stats.issued,
+      pat_redeemed:    privacyPass.stats.redeemed,
+      pat_rejected:    privacyPass.stats.rejected,
+      pat_spent:       privacyPass.spentSize,
       mode:            currentMetrics.mode,
       t:               Date.now(),
     });

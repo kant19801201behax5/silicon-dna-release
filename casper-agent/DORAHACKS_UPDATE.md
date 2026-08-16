@@ -587,6 +587,22 @@ replay→REPLAY_ATTACK, `/api/shadow-stats` populates) with the full suite green
   `tests/sealValidator.test.ts` (11 tests, incl. "client +0.4s → ACCEPTED" and
   "+40s → rejected") wired into CI. Verified live behind Cloudflare: two same-IP
   clients isolated, attacker (forged ciphertext)→403, legit→200.
+- **Privacy Pass anonymous tokens (P1.6) — cheaper, unlinkable proof-of-humanity**
+  — re-solving the Argon2 PoW on every request is expensive and links a client's
+  requests together. Now a client solves ONE PoW, exchanges it for a batch of
+  blinded one-time tokens, and redeems one per protected request instead. Built on
+  a real **OPRF(P-384, SHA-384)** (RFC 9497, base mode) over `@noble/curves`:
+  tokens are **unforgeable** (redemption value is `OPRF_skS(nonce)` — needs the
+  server key), **unlinkable** (issuance sees only a random-blinded element,
+  redemption sees only the nonce), and **one-time** (spent-set). New routes
+  `GET /api/pat/config` and `POST /api/pat/issue` (issuance gated behind a verified
+  PoW); a valid token in `x-privacy-pass-token`/`-output` substitutes for PoW at
+  `/api/enclave` and `/api/wallet`. Correctness is pinned to the official RFC 9497
+  §A.4.1.1 test vector — `BlindedElement`, `EvaluationElement` and `Output` match
+  byte-for-byte (`tests/privacyPass.test.ts`, 23 tests, wired into CI). Verified
+  live on prod: `/api/pat/config` served through Cloudflare, its public key equals
+  the one derived from the persistent server key, issuance correctly 403s without a
+  PoW, and `pat_*` counters are exposed in `/api/silicon-metrics`.
 
 ## How to Test (step by step)
 

@@ -116,6 +116,35 @@ L4  Argon2id Proof-of-Work — REAL, plus two independent sub-checks found
       `navigator.languages` → `AUTOMATION_DETECTED` ban. Reasons are collected
       independently so the ban log shows *why*, not just a bare flag.
 
+L4.5 Privacy Pass anonymous tokens (P1.6, 2026-08-17) — REAL, PoW alternative
+    src/services/privacyPass.ts. Re-solving the L4 Argon2 PoW on every crossing of
+    the interrogation threshold is expensive and links a client's requests together.
+    Privacy Pass replaces the repetition: a client solves ONE PoW, exchanges it for
+    a batch of blinded one-time tokens, then redeems one per protected request.
+      • Construction: OPRF(P-384, SHA-384), base mode 0x00 (RFC 9497), built on
+        @noble/curves. Client Blind(nonce)=blind·H2C(nonce) → server BlindEvaluate
+        =skS·blindedElement → client Finalize unblinds and hashes to the token.
+      • Unforgeable: the redemption value is OPRF_skS(nonce); without the server
+        key skS it cannot be produced for a fresh nonce (OPRF is a PRF).
+      • Unlinkable: at issuance the server sees only the random-blinded element, at
+        redemption only the nonce; the random blind makes the two independent, so a
+        redemption cannot be tied to the issuance that produced it.
+      • One-time: each nonce is recorded in a spent-set (TTL + size cap) on first
+        redemption; replays return TOKEN_ALREADY_SPENT.
+      Routes: GET /api/pat/config (suite + public key), POST /api/pat/issue (gated
+      behind a verified PoW — 403 without one, so tokens are "paid for" once). A
+      valid token in x-privacy-pass-token / x-privacy-pass-output substitutes for
+      PoW at /api/enclave and /api/wallet (consumed only when it actually bypasses
+      interrogation, via short-circuit evaluation). This is the privately-verifiable
+      form (issuer==origin, single key, no DLEQ proof transmitted); a multi-attester
+      deployment would upgrade to VOPRF mode 0x01 with per-epoch key rotation.
+      Correctness is pinned to the official RFC 9497 §A.4.1.1 vector — BlindedElement,
+      EvaluationElement and Output match byte-for-byte (23 unit tests,
+      tests/privacyPass.test.ts). Prod key is a persistent systemd Environment value
+      (PRIVACY_PASS_KEY) so tokens survive restarts; verified live that
+      /api/pat/config's public key equals pkS derived from that key. Counters
+      pat_issued / pat_redeemed / pat_rejected / pat_spent in /api/silicon-metrics.
+
 L5  Session Identity Hash — REAL, different formula than earlier documented
     `computeQuantumDNAHash()`: `HMAC-SHA256(key = L1's ML-KEM session key,
     message = jitterMean‖jitterVar‖spearmanRho‖powCalcTime‖powMemCost‖powHash)`.
