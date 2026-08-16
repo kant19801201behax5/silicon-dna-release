@@ -562,6 +562,17 @@ replay→REPLAY_ATTACK, `/api/shadow-stats` populates) with the full suite green
   (`jitterStats` + `jitterVerdict`: organic / flat=VM-sandbox / chaotic, 14 unit
   tests) exposes `jitter_verdict`/`jitter_cv` in `/api/silicon-metrics`. Prod
   reads `organic`, cv ≈ 0.18 (was ≈ 0 — meaningless).
+- **Cryptographic agent identity (P1.4) — the machine-economy answer to "which
+  agent is this?"** — wallet binding used to accept any 130-hex blob as a
+  "signature" (spoofable). `/api/wallet/bind` now does **real secp256k1
+  ecrecover** (EIP-191, `@noble/curves`) — the signature must recover to the
+  declared wallet or it's 401. New `POST /api/agent/verify` accepts a signed
+  agent credential (agentId + issuer + reputation + expiry + nonce), verifies it,
+  and returns a graduated **ALLOW / STEP_UP / DENY** blending verifiable identity
+  + reputation with behavior — so verified reputable agents are welcomed even
+  though they're automated (exactly what Casper's machine economy needs), while
+  anonymous callers fall back to behavior. `src/services/agentIdentity.ts`, 15
+  unit tests. Verified live on prod (real-sig→200, fake→401, tamper→SIGNER_MISMATCH).
 
 ## How to Test (step by step)
 

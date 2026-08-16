@@ -20,6 +20,7 @@ import { SybilCluster } from './src/services/sybilCluster';
 import { scoreBotRequest, type RequestHeaders } from './src/sniper';
 import { resolveTlsFp, tlsRisk } from './src/services/tlsFingerprint';
 import { jitterStats, jitterVerdict, type JitterVerdict } from './src/services/jitterProbe';
+import { verifyEip191, verifyAgentCredential, agentTrustDecision } from './src/services/agentIdentity';
 import { classifyAgent } from './src/services/agentClassifier';
 import { detectAutomation } from './src/services/automationDetector';
 import { shadowFilterMiddleware, getShadowStats, clearShadowRecords } from './src/middleware/shadowFilter';
@@ -1164,6 +1165,39 @@ async function startServer() {
     res.json(assessment);
   });
 
+  // ── /api/agent/verify — cryptographic agent identity (P1.4) ───────────────
+  // The machine-economy answer to "which agent is this?": an agent presents a
+  // signed credential (agentId + issuer + reputation + expiry + nonce). We do
+  // REAL secp256k1 ecrecover (EIP-191), confirm the signer == issuer, check
+  // expiry / trusted-issuer allowlist, then return a graduated ALLOW/STEP_UP/DENY
+  // that blends verifiable identity+reputation with this request's behavior risk.
+  // A verified, reputable agent is allowed even though it's automated — that's the
+  // point; anonymous callers still fall back to behavior.
+  app.post('/api/agent/verify', express.json(), (req, res) => {
+    const ip = getClientIp(req);
+    const { credential, signature } = req.body ?? {};
+    if (!credential || !signature) {
+      res.status(400).json({ error: 'MISSING_FIELDS', required: ['credential', 'signature'] }); return;
+    }
+    const trusted = (process.env.TRUSTED_AGENT_ISSUERS || '')
+      .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    const check = verifyAgentCredential(credential, signature,
+      trusted.length ? { trustedIssuers: new Set(trusted) } : {});
+    // Behavior risk for this caller: Frankenstein score (0..1), blended with TLS risk.
+    const behaviorRisk = Math.max(checkConsistency(req) / 100, lastTlsRisk ?? 0);
+    const decision = agentTrustDecision(check, behaviorRisk);
+    logEvent(ip, 'AGENT_VERIFY', { valid: check.valid, reason: check.reason, agentId: check.agentId, decision });
+    res.json({
+      verified: check.valid,
+      reason: check.reason,
+      agent_id: check.agentId ?? null,
+      reputation: check.reputation ?? null,
+      signer: check.signer ?? null,
+      behavior_risk: Number(behaviorRisk.toFixed(3)),
+      decision,
+    });
+  });
+
   // ── /api/shadow-stats — RPC shadow filter metrics ─────────────────────────
   app.get('/api/shadow-stats', (_req, res) => {
     res.json(getShadowStats());
@@ -1193,6 +1227,15 @@ async function startServer() {
 
     if (!validateSignatureStructure(signature)) {
       res.status(400).json({ error: 'INVALID_SIGNATURE_FORMAT' }); return;
+    }
+
+    // REAL EIP-191 ecrecover — the binding now proves control of the private key.
+    // Previously only signature *structure* was checked, so any 65-byte blob bound
+    // any wallet to any fingerprint (spoofable identity). Fixed 2026-08-16.
+    const recovered = verifyEip191(challenge, signature);
+    if (!recovered || recovered !== wallet.toLowerCase()) {
+      logEvent(clientIp, 'WALLET_SIG_INVALID', { wallet: wallet.toLowerCase(), recovered });
+      res.status(401).json({ error: 'SIGNATURE_INVALID', reason: 'recovered signer != wallet' }); return;
     }
 
     const sessionEntry = sessionKeys.get('default');

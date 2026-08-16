@@ -292,14 +292,25 @@ RPC Shadow Filter — REAL and WIRED (fixed 2026-08-16; was dead before)
     Verified live 2026-08-16 (local + prod redeploy): `/api/shadow-stats`
     populates (`tracked_ips`>0).
 
-Wallet Identity Binding — REAL, wired
+Wallet Identity Binding — REAL, wired; signature now CRYPTOGRAPHICALLY verified (2026-08-16, P1.4)
     src/services/walletBinder.ts. Binds an EIP-191 wallet address to an
     HMAC-derived behavioral fingerprint (entropy/variance/Spearman-ρ,
     keyed by the session secret — raw values never stored). 3+ distinct
     wallets sharing one behavioral hash flags as a Sybil group.
-    Verified: imported at server.ts:23, routes at server.ts:574 (legacy
-    /api/wallet stub), 1001 (/api/wallet/bind), 1036 (/api/wallet/lookup),
-    1048 (/api/wallet/stats), 1052 (localhost-only admin clear).
+    Until 2026-08-16 /api/wallet/bind only checked the signature was 130 hex
+    chars (structure) — any blob bound any wallet (spoofable identity). Now it
+    does REAL secp256k1 ecrecover (src/services/agentIdentity.ts verifyEip191,
+    @noble/curves): the signature must recover to the declared wallet over the
+    challenge or the bind is rejected 401.
+
+Agent Identity & Credentials — REAL (new 2026-08-16, P1.4)
+    src/services/agentIdentity.ts + POST /api/agent/verify. The machine-economy
+    answer to "which agent is this?": an agent presents a signed credential
+    (agentId + issuer + reputation + expiry + nonce); the server does real
+    EIP-191 ecrecover, confirms signer == issuer, checks expiry + optional
+    trusted-issuer allowlist, and returns a graduated ALLOW / STEP_UP / DENY
+    that blends verifiable identity + reputation with the request's behavior
+    risk. 15 unit tests (real sign+recover roundtrip, expiry, signer-mismatch, tamper).
 
 L6 Host-Telemetry Feed — REAL and LIVE (userspace fallback added 2026-08-16)
     The README's "L6 eBPF" is a host-telemetry feed (process-exec / TCP-connect
