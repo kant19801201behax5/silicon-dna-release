@@ -50,11 +50,17 @@ threshold; it's *not tripping any individual gate*.
 ## What's real, layer by layer
 
 ```
-L0  CPU Jitter Physics — REAL
-    probe-worker.mjs (Worker thread) samples process.hrtime.bigint() continuously.
-    Feeds mean/variance/entropy/autocorrelation into currentMetrics, published
-    over WebSocket every cycle. Also drives the SNIPER/STRESS/IDLE mode timer
-    and the synthetic-rhythm ban check (see L7 below).
+L0  CPU Jitter Physics — REAL (made meaningful 2026-08-16)
+    probe-worker.mjs (Worker thread) times a deterministic micro-workload
+    (integer-mix busy loop, src/services/jitterProbe.ts microWorkload) with
+    process.hrtime.bigint() — so the deltas carry real CPU/scheduler/cache jitter.
+    Before 2026-08-16 it timed two ADJACENT hrtime calls with nothing between them
+    ("Physical micro-pause" — but there was none), so every delta was just call
+    overhead: near-constant, no physical signal. jitterStats/jitterVerdict
+    (organic / flat=VM-sandbox / chaotic; 14 unit tests) feed mean/variance/
+    entropy/autocorrelation into currentMetrics + the DNA hash, and expose
+    jitter_verdict / jitter_cv in /api/silicon-metrics. Also drives the
+    SNIPER/STRESS/IDLE mode timer. Prod reads verdict=organic, cv≈0.18 (was ≈0).
 
 L1  ML-KEM-768 Channel (NIST FIPS 203) — REAL
     Library: `mlkem` (npm). Real keypair generated per WebSocket connection,

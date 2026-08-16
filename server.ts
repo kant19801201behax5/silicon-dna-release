@@ -19,6 +19,7 @@ import { persistBan, persistProfile, loadActiveBans, loadProfile, logEvent, clea
 import { SybilCluster } from './src/services/sybilCluster';
 import { scoreBotRequest, type RequestHeaders } from './src/sniper';
 import { resolveTlsFp, tlsRisk } from './src/services/tlsFingerprint';
+import { jitterStats, jitterVerdict, type JitterVerdict } from './src/services/jitterProbe';
 import { classifyAgent } from './src/services/agentClassifier';
 import { detectAutomation } from './src/services/automationDetector';
 import { shadowFilterMiddleware, getShadowStats, clearShadowRecords } from './src/middleware/shadowFilter';
@@ -130,6 +131,9 @@ async function startServer() {
   // hardcoded ja3:0.5 that was never real.
   let lastJa4: string | null = null;
   let lastTlsRisk: number | null = null;
+  // L0 CPU-jitter verdict from the (now real) micro-workload timings.
+  let lastJitterVerdict: JitterVerdict = 'insufficient';
+  let lastJitterCv = 0;
 
   type CurrentMetrics = {
     mean: number; variance: number; entropy: number; autocorr: number;
@@ -748,10 +752,16 @@ async function startServer() {
     else mode = 'SNIPER';
     sniperArmed = mode === 'SNIPER';
 
-    const mean = deltas.reduce((a, b) => a + b, 0) / deltas.length;
-    const variance = deltas.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / deltas.length;
-    const entropy = shannonEntropy(deltas); // FIXED: real Shannon entropy (was log(variance))
-    const r1 = calculateAutocorrelation(deltas);
+    // L0 stats via the tested jitterProbe module. Now that the worker times a real
+    // micro-workload (not two adjacent hrtime calls), these are a genuine physical
+    // signal. jitterVerdict = organic (real HW) / flat (VM/sandbox) / chaotic.
+    const jstats = jitterStats(deltas);
+    const mean = jstats.mean;
+    const variance = jstats.variance;
+    const entropy = jstats.entropy;
+    const r1 = jstats.autocorr;
+    lastJitterVerdict = jitterVerdict(jstats);
+    lastJitterCv = Number(jstats.cv.toFixed(4));
 
     const targetTemp = mode === 'STRESS' ? 76.4 : 38.2;
     const friction = variance / 100000;
@@ -882,6 +892,9 @@ async function startServer() {
       // no fabricated constant). tls_risk is [0,1] or null when unknown.
       tls_ja4:         lastJa4,
       tls_risk:        lastTlsRisk,
+      // L0 CPU-jitter verdict from the real micro-workload timings.
+      jitter_verdict:  lastJitterVerdict,
+      jitter_cv:       lastJitterCv,
       mode:            currentMetrics.mode,
       t:               Date.now(),
     });

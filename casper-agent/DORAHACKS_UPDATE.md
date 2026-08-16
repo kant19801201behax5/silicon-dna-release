@@ -555,6 +555,13 @@ replay→REPLAY_ATTACK, `/api/shadow-stats` populates) with the full suite green
   ClientHello isn't visible, so on prod it reads null until a JA4 source (CF
   Enterprise header or a direct TLS-peek front on the same `computeJA4`) is wired
   — deployed-ready, honestly disclosed, not faked.
+- **L0 CPU-jitter is now a real physical signal** — the probe worker used to time
+  two adjacent `hrtime.bigint()` calls with nothing between them (just call
+  overhead, near-constant). It now times a deterministic micro-workload, so the
+  deltas carry genuine CPU/scheduler jitter. `src/services/jitterProbe.ts`
+  (`jitterStats` + `jitterVerdict`: organic / flat=VM-sandbox / chaotic, 14 unit
+  tests) exposes `jitter_verdict`/`jitter_cv` in `/api/silicon-metrics`. Prod
+  reads `organic`, cv ≈ 0.18 (was ≈ 0 — meaningless).
 
 ## How to Test (step by step)
 

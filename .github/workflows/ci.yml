@@ -178,3 +178,18 @@ jobs:
         run: python -m py_compile phoenix_userspace_sensor.py
       - name: Unit tests (parse / count / diff / systemic_risk / build_events)
         run: python tests/test_phoenix_sensor.py
+
+  # Added 2026-08-16. The L2 (TLS JA4) and L0 (CPU-jitter) hardening ship pure,
+  # testable modules (src/services/tlsFingerprint.ts, jitterProbe.ts). This runs
+  # their vitest unit suites so the fake-ja3-removal and the real-jitter workload
+  # can't regress. (Full 300+ suite runs in the private core repo.)
+  test-core-units:
+    name: L0/L2 core unit tests (jitter + TLS JA4)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: vitest — jitterProbe + tlsFingerprint
+        run: npx --yes vitest@2.1.9 run tests/jitterProbe.test.ts tests/tlsFingerprint.test.ts
