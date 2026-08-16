@@ -180,9 +180,31 @@ async function startServer() {
     nonce: string; calcTime: number; m_cost: number; verifiedAt: number;
   }>({ max: 10000, ttl: 1000 * 60 * 5 });
 
+  // P1.5: per-client PQC sessions — keyed by client IP, not a single shared
+  // 'default'. Each WebSocket connection gets its own ML-KEM shared secret, so
+  // one client can't ride another's tunnel and the seal/ratchet/sequence are
+  // isolated per client.
   const sessionKeys = new LRUCache<string, { key: Buffer; counter: number }>({
     max: 5000, ttl: 1000 * 60 * 60
   });
+
+  // P1.5: per-connection PQC session id. A per-IP key can't isolate clients
+  // behind Cloudflare (shared/ambiguous source IP), so each WS handshake mints a
+  // random session token, returns it to the client, and the client echoes it in
+  // `x-silicon-dna-session`. Falls back to 'default' when absent, so the existing
+  // dashboard (which doesn't send a token yet) keeps working unchanged.
+  function sessionIdOf(req: { headers: Record<string, unknown> }): string {
+    const h = req.headers['x-silicon-dna-session'];
+    const s = typeof h === 'string' ? h : Array.isArray(h) ? h[0] : '';
+    return s && /^[a-f0-9]{16,64}$/i.test(s) ? s : 'default';
+  }
+
+  // Server-side DNA key: the quantum DNA hash is the SERVER's own entropy
+  // commitment (published to all clients over WS), so it uses a stable
+  // server-generated key rather than borrowing a client's session key. This also
+  // means jitter/DNA metrics flow immediately, not only after some client's PQC
+  // handshake (the old `sessionKeys.get('default')` gate froze metrics headless).
+  const serverDnaKey = crypto.randomBytes(32);
 
   const packetSequences = new LRUCache<string, number>({
     max: 5000, ttl: 1000 * 60 * 10
@@ -583,7 +605,7 @@ async function startServer() {
   // ── /api/sync-pulse ────────────────────────────────────────────────────────
   app.get('/api/sync-pulse', (req, res) => {
     const ip = getClientIp(req);
-    const entry = sessionKeys.get('default');
+    const entry = sessionKeys.get(sessionIdOf(req));
     if (!entry) return res.status(403).json({ error: 'PQC_SESSION_NOT_ESTABLISHED' });
     const pulse = rhythmManager.generateSyncPulse(ip, entry.key);
     res.json({ pulse, driftAdjustment: rhythmManager.getDriftAdjustment(ip) });
@@ -610,11 +632,15 @@ async function startServer() {
 
     const sealHeader = req.headers['x-silicon-dna-seal'] as string;
     const noiseHeader = req.headers['x-silicon-dna-noise'] as string;
-    const entry = sessionKeys.get('default');
+    const sid = sessionIdOf(req);            // per-connection token, or 'default'
+    const entry = sessionKeys.get(sid);
 
     if (!entry) return res.status(403).json({ error: 'PQC_SESSION_NOT_ESTABLISHED' });
 
-    const lastSeq = packetSequences.get(ip) || 0;
+    // Sequence counter is per-session (sid), not per-IP — two clients behind the
+    // same NAT/proxy IP have independent sessions, so one's seq must not look like
+    // a replay of the other's.
+    const lastSeq = packetSequences.get(sid) || 0;
     const expectedSeq = lastSeq + 1;
 
     // L5 anti-replay: a captured seal carries the sequence number it was minted
@@ -656,12 +682,12 @@ async function startServer() {
         .update(Buffer.concat([entry.key, Buffer.from(noiseSum.toString())]))
         .digest();
       entry.counter = 0;
-      sessionKeys.set('default', entry);
+      sessionKeys.set(sid, entry);
       currentMetrics.keyRatchetCycles++;
       console.log(`[PQC: RATCHET] Key rotation #${currentMetrics.keyRatchetCycles}`);
     }
 
-    packetSequences.set(ip, expectedSeq);
+    packetSequences.set(sid, expectedSeq);
 
     if (sniperArmed && !pow && requiresArgon2) {
       return res.status(403).json({ error: 'ACTIVE_INTERROGATION_REQUIRED' });
@@ -779,14 +805,15 @@ async function startServer() {
     const normalizedHistogram = bins.map(b => (b / maxBin) * 100);
 
     const jitterHash = crypto.createHash('sha256').update(deltas.join(',')).digest('hex');
-    const entry = sessionKeys.get('default');
-    if (!entry) return; // wait until PQC handshake completes
-
+    // P1.5: the DNA hash is the server's own entropy commitment — keyed by the
+    // stable serverDnaKey, not any client's per-session key. No PQC-session gate,
+    // so jitter/DNA metrics flow even with no client connected (fixes the old
+    // headless-freeze where metrics stayed 0 until a browser did the handshake).
     // Use IP-specific PoW; fall back to most recent if client hasn't verified yet
     const latestPow = verifiedPoW.get(lastClientIp) ?? Array.from(verifiedPoW.values()).pop();
 
     const quantumHash = computeQuantumDNAHash(
-      entry.key,
+      serverDnaKey,
       mean / 1000,      // ns → µs
       variance / 1e6,   // ns² → µs²
       lastSpearmanRho,  // FIXED: actual Spearman ρ from microStall filter
@@ -848,8 +875,14 @@ async function startServer() {
             pqcCooldownUntil = Date.now() + 100;
             const sharedSecret = await kem.decap(new Uint8Array(ct), sk);
             pqcCooldownUntil = Date.now() + 50; // tail cooldown post-decap
+            // Per-connection session token (works behind Cloudflare's shared IP,
+            // unlike per-IP keying). Also refresh 'default' for backward-compat
+            // with clients that don't echo the token yet (e.g. current dashboard).
+            const sid = crypto.randomBytes(16).toString('hex');
+            const secret = { key: Buffer.from(sharedSecret), counter: 0 };
+            sessionKeys.set(sid, secret);
             sessionKeys.set('default', { key: Buffer.from(sharedSecret), counter: 0 });
-            ws.send(JSON.stringify({ type: 'PQC_ESTABLISHED' }));
+            ws.send(JSON.stringify({ type: 'PQC_ESTABLISHED', sessionId: sid }));
             console.log(`[PQC] ML-KEM-768 tunnel established. ss=${Buffer.from(sharedSecret).toString('hex').slice(0,16)}... IP: ${ip}`);
           }
         } catch (_e) { /* malformed JSON ignored */ }
@@ -1132,7 +1165,7 @@ async function startServer() {
     const automationVerdict = automationFingerprint ? detectAutomation(automationFingerprint) : null;
 
     const signals = [
-      pqcSessionSignal(sessionKeys.has('default')),
+      pqcSessionSignal(sessionKeys.has(sessionIdOf(req))),
       automationSignal(automationVerdict?.detected ?? false, automationVerdict?.reasons ?? []),
       frankensteinSignal(frankensteinScore),
       rhythmTrustSignal(rhythmManager.getTrustStatus(ip)),
@@ -1238,8 +1271,9 @@ async function startServer() {
       res.status(401).json({ error: 'SIGNATURE_INVALID', reason: 'recovered signer != wallet' }); return;
     }
 
-    const sessionEntry = sessionKeys.get('default');
-    const secret = sessionEntry?.key ?? crypto.randomBytes(32);
+    // Per-client session key as the HMAC secret; stable serverDnaKey fallback
+    // (the old per-call crypto.randomBytes made no-session hashes non-reproducible).
+    const secret = sessionKeys.get(sessionIdOf(req))?.key ?? serverDnaKey;
     const behavioralHash = computeBehavioralHash(
       secret,
       currentMetrics.entropy,
@@ -1285,12 +1319,13 @@ async function startServer() {
   // ── /api/zk — ZK-lite proof generation and redemption ────────────────────
   app.post('/api/zk/issue', (req, res) => {
     const clientIp = getClientIp(req);
-    const sessionEntry = sessionKeys.get('default');
-    const secret = sessionEntry?.key ?? crypto.randomBytes(32);
+    // Per-client session key as the HMAC secret; stable serverDnaKey fallback
+    // (the old per-call crypto.randomBytes made no-session hashes non-reproducible).
+    const secret = sessionKeys.get(sessionIdOf(req))?.key ?? serverDnaKey;
 
     const pow = verifiedPoW.get(clientIp);
     const layers: LayerResult = {
-      l0_pqc:          !!sessionEntry,
+      l0_pqc:          sessionKeys.has(clientIp),
       l1_gpu_ua:        true,
       l2_frankenstein:  true,
       l3_spearman:      lastSpearmanRho >= (liveRules.rho ?? 0.3),
@@ -1305,8 +1340,9 @@ async function startServer() {
   });
 
   app.post('/api/zk/verify', express.json(), (req, res) => {
-    const sessionEntry = sessionKeys.get('default');
-    const secret = sessionEntry?.key ?? crypto.randomBytes(32);
+    // Per-client session key as the HMAC secret; stable serverDnaKey fallback
+    // (the old per-call crypto.randomBytes made no-session hashes non-reproducible).
+    const secret = sessionKeys.get(sessionIdOf(req))?.key ?? serverDnaKey;
     const proof = req.body?.proof;
 
     if (!proof || typeof proof.commitment !== 'string') {

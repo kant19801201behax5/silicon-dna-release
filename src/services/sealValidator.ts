@@ -33,10 +33,16 @@ export function verifyEntropySeal(
     const sealData: SealData = JSON.parse(Buffer.from(sealHeader, 'base64').toString('utf-8'));
     const { sig, ts, seq } = sealData;
 
-    // 1. Anti-Replay: Window 5s
+    // 1. Anti-Replay window, with clock-skew tolerance.
+    // A hard `age < 0` rejected any client whose clock was even a few hundred ms
+    // AHEAD of the server — which is most real clients (browsers behind Cloudflare
+    // etc.), so the enclave seal only ever validated when the caller ran on the
+    // server itself. We keep a 5s freshness window against replay, but allow up to
+    // CLOCK_SKEW into the "future" so a normally-skewed client isn't rejected.
+    const CLOCK_SKEW_US = 30_000_000; // 30s each way for NTP drift / latency
     const nowMicro = Date.now() * 1000;
     const age = nowMicro - ts;
-    if (age < 0 || age > 5000000) { 
+    if (age > 5_000_000 + CLOCK_SKEW_US || age < -CLOCK_SKEW_US) {
       return { valid: false, trustImpact: -0.5, requiresArgon2: true };
     }
 

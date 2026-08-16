@@ -62,12 +62,19 @@ L0  CPU Jitter Physics — REAL (made meaningful 2026-08-16)
     jitter_verdict / jitter_cv in /api/silicon-metrics. Also drives the
     SNIPER/STRESS/IDLE mode timer. Prod reads verdict=organic, cv≈0.18 (was ≈0).
 
-L1  ML-KEM-768 Channel (NIST FIPS 203) — REAL
+L1  ML-KEM-768 Channel (NIST FIPS 203) — REAL, now per-connection (P1.5, 2026-08-17)
     Library: `mlkem` (npm). Real keypair generated per WebSocket connection,
-    real decapsulation on the client's response — this is an actual post-quantum
-    KEM handshake, not a placeholder. The resulting shared secret becomes the
-    HMAC key for L5 below and is ratcheted (re-derived from accumulated client
-    noise) every 50 packets on the protected `/api/enclave` endpoint.
+    real decapsulation on the client's response — an actual post-quantum KEM
+    handshake, not a placeholder. Each handshake now mints a per-connection
+    session token (`sessionId`), returned in PQC_ESTABLISHED; the client echoes
+    it in `x-silicon-dna-session` and the server resolves THAT session — so two
+    clients behind one shared proxy IP (Cloudflare) are isolated, which per-IP
+    keying could not do. Falls back to a shared 'default' session for clients that
+    don't send the token yet (backward compatible). The shared secret is the HMAC
+    key for L5 and ratchets every 50 packets; the sequence counter is per-session.
+    (The server's own DNA hash uses a separate serverDnaKey, so jitter/DNA metrics
+    no longer depend on any client session.) Verified live behind Cloudflare:
+    two same-IP clients isolated, attacker (forged ciphertext)→403, legit→200.
 
 L2  TLS Fingerprint (JA4) — REAL consumption path (2026-08-16), honest null otherwise
     The fake fixed `ja3: 0.5` is gone. `src/services/tlsFingerprint.ts` implements
@@ -197,7 +204,14 @@ gates /api/enclave specifically
     independent of every other gate in this file. Since 2026-08-16 a seal that
     reuses an already-consumed sequence number (seq ≤ last accepted) is caught
     before signature check and banned with an explicit 403 REPLAY_ATTACK (was
-    previously an unlabeled ENTROPY_SEAL_INVALID). Low trustScore forces an
+    previously an unlabeled ENTROPY_SEAL_INVALID). P1.5 (2026-08-17) fixes a
+    fundamental clock-skew bug: the validator rejected any seal whose timestamp
+    was ahead of the server (age < 0) — which is every real browser whose clock
+    runs even milliseconds fast, making the enclave unusable for legitimate
+    clients behind Cloudflare. It now tolerates ±30s of skew in both directions
+    (CLOCK_SKEW_US), with the freshness window as 5s + skew. Covered by
+    regression tests "client +0.4s → ACCEPTED" and "+40s → rejected"
+    (tests/sealValidator.test.ts, 11 tests). Low trustScore forces an
     extra Argon2 PoW challenge (403 ACTIVE_INTERROGATION_REQUIRED) before
     the request is served.
     Verified: imported at server.ts:14-15, routes at server.ts:510-523,

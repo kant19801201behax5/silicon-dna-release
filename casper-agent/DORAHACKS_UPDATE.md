@@ -573,6 +573,20 @@ replay→REPLAY_ATTACK, `/api/shadow-stats` populates) with the full suite green
   though they're automated (exactly what Casper's machine economy needs), while
   anonymous callers fall back to behavior. `src/services/agentIdentity.ts`, 15
   unit tests. Verified live on prod (real-sig→200, fake→401, tamper→SIGNER_MISMATCH).
+- **Per-connection post-quantum sessions + seal clock-skew fix (P1.5)** — the
+  ML-KEM-768 enclave used to key sessions by IP, so two agents behind one shared
+  proxy IP (Cloudflare fronts prod) collided and a legitimate second client
+  looked like a replay of the first. Each WebSocket handshake now mints a
+  per-connection session token (returned in `PQC_ESTABLISHED`); the client echoes
+  it in `x-silicon-dna-session` and the server resolves that exact session (the
+  packet-sequence counter is now per-session too), with a `'default'` fallback
+  for older clients. In the same pass we fixed a fundamental bug that had made
+  the enclave unusable for real browsers: the entropy-seal validator rejected any
+  timestamp ahead of the server (`age < 0`), i.e. every client whose clock ran
+  even milliseconds fast. It now tolerates ±30s of skew both ways. New
+  `tests/sealValidator.test.ts` (11 tests, incl. "client +0.4s → ACCEPTED" and
+  "+40s → rejected") wired into CI. Verified live behind Cloudflare: two same-IP
+  clients isolated, attacker (forged ciphertext)→403, legit→200.
 
 ## How to Test (step by step)
 
