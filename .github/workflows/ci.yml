@@ -160,3 +160,21 @@ jobs:
             exit 1
           fi
           echo "OK: no PEM keys"
+
+  # Added 2026-08-16 with the L6 userspace sensor. The eBPF sensor needs bcc +
+  # kernel headers (absent on the prod droplet), so L6 sat dead — zero events.
+  # phoenix_userspace_sensor.py feeds real /proc-based exec/tcp/rtt telemetry with
+  # only the stdlib; this job unit-tests its pure parsing/scoring functions so the
+  # L6 layer can't silently rot again.
+  test-l6-sensor:
+    name: L6 userspace sensor — pure-function unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Syntax check
+        run: python -m py_compile phoenix_userspace_sensor.py
+      - name: Unit tests (parse / count / diff / systemic_risk / build_events)
+        run: python tests/test_phoenix_sensor.py

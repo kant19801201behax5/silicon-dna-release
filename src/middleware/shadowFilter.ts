@@ -38,18 +38,28 @@ function defaultResolveIp(req: Request): string {
 }
 
 /**
- * Control-plane / observability endpoints the throttle must never gate — else a
- * single flagged monitoring/admin IP could 429 out /metrics or the very reset
- * endpoint that clears the flag (self-inflicted deadlock).
+ * Control-plane / observability / localhost-ingestion endpoints the throttle must
+ * never gate — else a flagged monitor/admin IP could 429 out /metrics or the reset
+ * endpoint (self-inflicted deadlock), and the localhost L6 sensor POSTing telemetry
+ * to /api/agent/interact every 2s would get throttled (which it did — that endpoint
+ * is localhost-only and nginx-denied externally, so it is safe to exempt).
  */
-const SHADOW_EXEMPT = [/^\/metrics/, /^\/api\/admin\//, /^\/api\/silicon-metrics/, /^\/api\/phoenix-status/, /^\/api\/health/, /^\/api\/public-feed/, /^\/api\/check-ip/];
+const SHADOW_EXEMPT = [
+  /^\/metrics/, /^\/api\/admin\//, /^\/api\/silicon-metrics/, /^\/api\/phoenix-status/,
+  /^\/api\/health/, /^\/api\/public-feed/, /^\/api\/check-ip/, /^\/api\/agent\/interact/,
+];
+
+/** Exported for unit testing: is this path exempt from the shadow throttle? */
+export function isShadowExempt(path: string): boolean {
+  return SHADOW_EXEMPT.some(re => re.test(path));
+}
 
 export function shadowFilterMiddleware(
   getContext: (req: Request) => Omit<ClassificationInput, 'ua' | 'headers'>,
   resolveIp: (req: Request) => string = defaultResolveIp,
 ) {
   return (req: Request, res: Response, next: NextFunction): void => {
-    if (SHADOW_EXEMPT.some(re => re.test(req.path))) { next(); return; }
+    if (isShadowExempt(req.path)) { next(); return; }
 
     const ip = resolveIp(req);
 
