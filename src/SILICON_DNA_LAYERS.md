@@ -288,6 +288,18 @@ Wallet Identity Binding — REAL, wired
     Verified: imported at server.ts:23, routes at server.ts:574 (legacy
     /api/wallet stub), 1001 (/api/wallet/bind), 1036 (/api/wallet/lookup),
     1048 (/api/wallet/stats), 1052 (localhost-only admin clear).
+
+L6 Host-Telemetry Feed — REAL and LIVE (userspace fallback added 2026-08-16)
+    The README's "L6 eBPF" is a host-telemetry feed (process-exec / TCP-connect
+    velocity + live RTT), surfaced as phoenix_exec / phoenix_tcp / phoenix_rtt_ms
+    / phoenix_threat and ingested localhost-only via POST /api/agent/interact.
+    The eBPF sensor needs bcc + kernel headers, which the prod droplet lacks — so
+    the feed sat at zero. phoenix_userspace_sensor.py (stdlib-only /proc reader:
+    new PIDs = exec, /proc/net/tcp[6] = TCP-connect, socket RTT) now feeds it as
+    phoenix-sensor.service, no kernel modules. Verified live: the phoenix_* fields
+    are non-zero. Pure functions unit-tested (tests/test_phoenix_sensor.py, 22
+    cases) + CI job test-l6-sensor. /api/agent/interact is exempt from the shadow
+    throttle (localhost-only, nginx-denied externally).
 ```
 
 ## Cross-IP Sybil Clustering (separate service, not one of the numbered layers)

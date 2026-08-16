@@ -537,6 +537,14 @@ replay→REPLAY_ATTACK, `/api/shadow-stats` populates) with the full suite green
   variance-only check, and feeds the cross-IP `SybilCluster` on every request.
 - **`/api/admin/reset-bans` is a true full reset** — clears bans (memory+disk),
   Sybil flags, shadow throttles, and timing history.
+- **L6 host-telemetry feed is alive again** — the eBPF sensor needs `bcc` +
+  kernel headers, absent on the prod droplet, so L6 fed zeros
+  (`phoenix_exec/tcp/rtt` all 0). A new userspace fallback sensor
+  (`phoenix_userspace_sensor.py`, stdlib-only `/proc` reader) now feeds real
+  process-exec / TCP-connect / RTT telemetry into `/api/agent/interact`.
+  Deployed as `phoenix-sensor.service`; verified live (metrics non-zero). Its
+  pure functions are unit-tested (`tests/test_phoenix_sensor.py`, 22 cases) and
+  CI-enforced (`test-l6-sensor` job), so L6 can't silently rot again.
 
 ## How to Test (step by step)
 
