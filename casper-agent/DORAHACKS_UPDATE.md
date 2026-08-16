@@ -603,6 +603,20 @@ replay→REPLAY_ATTACK, `/api/shadow-stats` populates) with the full suite green
   live on prod: `/api/pat/config` served through Cloudflare, its public key equals
   the one derived from the persistent server key, issuance correctly 403s without a
   PoW, and `pat_*` counters are exposed in `/api/silicon-metrics`.
+- **Drift-adaptive anomaly calibration (P2.7) — the detector re-tunes itself and
+  says so** — the synthetic-rhythm gate's σ² cutoff used to be recomputed every 5
+  minutes as `clamp(p10·1.5, 1, 5)` over a batch buffer thrown away each cycle. It
+  now runs online on two established streaming algorithms: the **P² quantile
+  estimator** (Jain & Chlamtac 1985) tracks the 10th percentile of *passed-traffic*
+  timing variance in O(1) memory (no reset), and a **Page-Hinkley** two-sided change
+  detector raises an explicit drift alarm when the traffic distribution shifts — so
+  the system reports *when its own assumptions moved* instead of silently sliding.
+  The cutoff stays hard-clamped to [1,5] and only learns from traffic that already
+  passed the gate (anti-poisoning). `src/services/driftModel.ts`, 15 unit tests
+  (P² accuracy vs known quantiles, up/down drift detection, warmup/clamp/drift
+  transitions), wired into CI. New metrics `adaptive_sigma2` / `drift_status` /
+  `drift_samples` / `drift_events`; verified live on prod (fresh boot → warmup/floor,
+  fields served through Cloudflare).
 
 ## How to Test (step by step)
 

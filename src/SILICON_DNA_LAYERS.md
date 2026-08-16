@@ -164,13 +164,34 @@ L7  Synthetic Rhythm Detector — REAL, scored (upgraded 2026-08-16), not an ML 
     last 10-20 request timestamps from one IP it now calls the tested
     `scoreBotRequest` (`src/sniper.ts`, 45 unit tests) — a multi-factor score of
     σ² + interval-entropy + lag-1 autocorrelation + header signals; total ≥ 60 ⇒
-    synthetic, ban. The σ² threshold is `liveRules.sigma2`, auto-calibrated every
-    5 minutes from a rolling p10 of observed variance (`AUTO-CAL`). Before
-    2026-08-16 this was an inline variance-only check (`v < sigma2 || (v>10 &&
+    synthetic, ban. The σ² threshold is `liveRules.sigma2`, now set by the P2.7
+    drift-adaptive model (see L7.6) rather than the old 5-minute batch `AUTO-CAL`.
+    Before 2026-08-16 this was an inline variance-only check (`v < sigma2 || (v>10 &&
     |r1|<0.1)`) and `src/sniper.ts` was tested but unwired; it is now the live
     detector. Still explicit scoring on computed statistics — **not** a trained
     or online-updated SVM. On block it also feeds L7.5 Sybil (`sybilCluster.flag`),
     now wired into the detection path (was manual-endpoint-only before).
+
+L7.6 Drift-adaptive σ² calibration (P2.7, 2026-08-17) — REAL, online, drift-aware
+    src/services/driftModel.ts. The old calibrator recomputed the L7 σ² cutoff
+    every 5 minutes as clamp(p10·1.5, 1, 5) over a batch buffer that was discarded
+    each cycle — single-signal, no memory, no notion of "the traffic changed". This
+    replaces it with two established streaming algorithms:
+      • P2Quantile — the P² algorithm (Jain & Chlamtac, 1985) tracks the 10th
+        percentile of passed-traffic timing variance in O(1) memory, adapting to
+        drift continuously (no periodic reset). The cutoff is that estimate × 1.5,
+        hard-clamped to [1, 5] so no crafted traffic can drive the gate degenerate.
+      • PageHinkley — a two-sided sequential change detector raises an explicit
+        drift alarm when the running mean of the signal shifts beyond tolerance.
+        The gate status (warmup → stable ↔ drift) and a drift-event counter are
+        exposed, so operators learn *when the calibration assumptions moved* instead
+        of the threshold silently sliding.
+      Anti-poisoning: only variance from requests that PASSED the gate is fed in
+      (blocked traffic never reaches the feed), and the [1,5] clamp bounds any slow
+      baseline-shifting attack. 15 unit tests (P² accuracy vs known quantiles,
+      Page-Hinkley up/down detection, warmup/clamp/drift transitions),
+      tests/driftModel.test.ts. Metrics: adaptive_sigma2 / drift_status /
+      drift_samples / drift_events in /api/silicon-metrics.
 
 L8  Spearman "Grey Zone" Stall Correlation — REAL, independent ban trigger
     `microStallMiddleware`: injects a small random server-side delay (5-30ms)

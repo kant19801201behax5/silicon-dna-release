@@ -23,6 +23,7 @@ import { jitterStats, jitterVerdict, type JitterVerdict } from './src/services/j
 import { verifyEip191, verifyAgentCredential, agentTrustDecision } from './src/services/agentIdentity';
 import { classifyAgent } from './src/services/agentClassifier';
 import { PrivacyPassIssuer } from './src/services/privacyPass';
+import { DriftAdaptiveThreshold } from './src/services/driftModel';
 import { detectAutomation } from './src/services/automationDetector';
 import { shadowFilterMiddleware, getShadowStats, clearShadowRecords } from './src/middleware/shadowFilter';
 import { computeBehavioralHash, validateSignatureStructure, bindWallet, lookupWallet, getWalletsByHash, getBindingStats, clearBindings } from './src/services/walletBinder';
@@ -78,8 +79,12 @@ async function startServer() {
         .then(r => r.json())
         .then((data: any) => {
           if (data?.rules) {
-            liveRules = { ...liveRules, ...data.rules };
-            console.log(`[🧬 DNA-RULES] Synced: σ²=${liveRules.sigma2} ρ=${liveRules.rho}`);
+            // σ² is owned locally by the drift-adaptive model (P2.7); JARVIS still
+            // provides rho + argon2. Ignoring a JARVIS-sent sigma2 avoids the two
+            // calibrators fighting over the same value.
+            const { sigma2: _driftOwned, ...rest } = data.rules;
+            liveRules = { ...liveRules, ...rest };
+            console.log(`[🧬 DNA-RULES] Synced: σ²=${liveRules.sigma2}(drift-owned) ρ=${liveRules.rho}`);
           }
         })
         .catch((e: Error) => console.warn(`[DNA-RULES] sync failed: ${e.message}`));
@@ -87,20 +92,16 @@ async function startServer() {
     syncRules();
     setInterval(syncRules, 60_000);
   }
-  // Auto-calibration: collect σ² samples, adjust liveRules.sigma2 every 5 min
-  const varianceSamples: number[] = [];
-  const MAX_SAMPLES = 2000;
-  setInterval(() => {
-    if (varianceSamples.length < 50) return;
-    const sorted = [...varianceSamples].sort((a, b) => a - b);
-    const p10 = sorted[Math.floor(sorted.length * 0.10)];
-    const newSigma2 = Math.max(1.0, Math.min(5.0, p10 * 1.5));
-    if (Math.abs(newSigma2 - liveRules.sigma2) > 0.1) {
-      liveRules.sigma2 = Number(newSigma2.toFixed(2));
-      console.log(`[🧬 AUTO-CAL] σ² → ${liveRules.sigma2} (p10=${p10.toFixed(2)}, n=${varianceSamples.length})`);
-    }
-    varianceSamples.length = 0;
-  }, 5 * 60 * 1000);
+  // ── Drift-adaptive σ² cutoff (P2.7) ────────────────────────────────────────
+  // Replaces the old 5-minute batch calibrator (clamp(p10·1.5, 1, 5) over a
+  // sample buffer). The P²-quantile tracks the 10th percentile of *passed* timing
+  // variance online (O(1) memory, no periodic reset), and the Page-Hinkley test
+  // raises an explicit drift alarm when that distribution shifts. Threshold is
+  // hard-clamped to [1,5] so no crafted traffic can drive the gate degenerate.
+  const sigmaDrift = new DriftAdaptiveThreshold({
+    quantile: 0.10, floor: 1.0, ceil: 5.0, margin: 1.5, warmup: 50,
+    ph: { delta: 0.05, lambda: 50 },
+  });
 
   // ── Sybil Cluster (cross-IP cohort detection) ──────────────────────────────
   const sybilCluster = new SybilCluster();
@@ -412,7 +413,6 @@ async function startServer() {
         secFetchSite: req.headers['sec-fetch-site'] as string | undefined,
       };
       const score = scoreBotRequest(intervals, headers, liveRules.sigma2);
-      if (varianceSamples.length < MAX_SAMPLES) varianceSamples.push(score.variance);
 
       // L2.5 Sybil: feed every fingerprint (clean traffic too) so a shared
       // botnet signature can be told apart from an ordinary residential IP pool.
@@ -434,6 +434,18 @@ async function startServer() {
         console.warn(`[SNIPER: DROP] ${reason} cohort=${cohortSize}. IP: ${ip}`);
         req.socket.destroy();
         return;
+      }
+
+      // P2.7: only passed (presumed-legit) variance feeds the drift model — blocked
+      // traffic returns above and never reaches here, which is the anti-poisoning
+      // guard. Adapt the σ² cutoff online and log when the distribution drifts.
+      sigmaDrift.observe(score.variance);
+      if (sigmaDrift.ready) {
+        const adapted = Number(sigmaDrift.threshold.toFixed(2));
+        if (Math.abs(adapted - liveRules.sigma2) > 0.1) {
+          liveRules.sigma2 = adapted;
+          console.log(`[🧬 DRIFT-CAL] σ² → ${adapted} (q10·1.5, n=${sigmaDrift.count}${sigmaDrift.status === 'drift' ? ', DRIFT' : ''})`);
+        }
       }
     }
 
@@ -976,6 +988,11 @@ async function startServer() {
       pat_redeemed:    privacyPass.stats.redeemed,
       pat_rejected:    privacyPass.stats.rejected,
       pat_spent:       privacyPass.spentSize,
+      // Drift-adaptive σ² model (P2.7): current adaptive cutoff + drift state.
+      adaptive_sigma2: sigmaDrift.snapshot().threshold,
+      drift_status:    sigmaDrift.status,       // warmup | stable | drift
+      drift_samples:   sigmaDrift.count,
+      drift_events:    sigmaDrift.drifts,
       mode:            currentMetrics.mode,
       t:               Date.now(),
     });
