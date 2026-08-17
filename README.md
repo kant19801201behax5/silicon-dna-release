@@ -3,6 +3,8 @@
 > **Mantle Turing Test Hackathon 2026** · Track: AI Trading & Strategy (Alpha & Data)
 > 
 > **Also submitted:** Casper Agentic Buildathon 2026 (`casper-agent/`)
+>
+> 🛡️ **Security hardening summary (what was closed, before→after, how much improved):** [`HARDENING_REPORT.md`](HARDENING_REPORT.md) — P0.1–P2.8 complete, 371 tests, incl. RFC 9497 & FIPS 204 known-answer tests.
 
 ---
 
