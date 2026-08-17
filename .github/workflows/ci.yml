@@ -194,5 +194,5 @@ jobs:
           node-version: '20'
       - name: Install deps (@noble for agentIdentity ecrecover)
         run: npm install
-      - name: vitest — jitterProbe + tlsFingerprint + agentIdentity + sealValidator + privacyPass + driftModel
-        run: npx --yes vitest@2.1.9 run tests/jitterProbe.test.ts tests/tlsFingerprint.test.ts tests/agentIdentity.test.ts tests/sealValidator.test.ts tests/privacyPass.test.ts tests/driftModel.test.ts
+      - name: vitest — jitterProbe + tlsFingerprint + agentIdentity + sealValidator + privacyPass + driftModel + pqAgentIdentity
+        run: npx --yes vitest@2.1.9 run tests/jitterProbe.test.ts tests/tlsFingerprint.test.ts tests/agentIdentity.test.ts tests/sealValidator.test.ts tests/privacyPass.test.ts tests/driftModel.test.ts tests/pqAgentIdentity.test.ts

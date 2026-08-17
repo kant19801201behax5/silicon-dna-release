@@ -20,7 +20,7 @@ import { SybilCluster } from './src/services/sybilCluster';
 import { scoreBotRequest, type RequestHeaders } from './src/sniper';
 import { resolveTlsFp, tlsRisk } from './src/services/tlsFingerprint';
 import { jitterStats, jitterVerdict, type JitterVerdict } from './src/services/jitterProbe';
-import { verifyEip191, verifyAgentCredential, agentTrustDecision } from './src/services/agentIdentity';
+import { verifyEip191, verifyAgentCredential, verifyMlDsaCredential, agentTrustDecision } from './src/services/agentIdentity';
 import { classifyAgent } from './src/services/agentClassifier';
 import { PrivacyPassIssuer } from './src/services/privacyPass';
 import { DriftAdaptiveThreshold } from './src/services/driftModel';
@@ -1270,16 +1270,26 @@ async function startServer() {
   // that blends verifiable identity+reputation with this request's behavior risk.
   // A verified, reputable agent is allowed even though it's automated — that's the
   // point; anonymous callers still fall back to behavior.
+  // P2.8: the caller may instead present a post-quantum credential by sending
+  // alg='ml-dsa-65' + publicKey (hex); we then verify with ML-DSA-65 (FIPS 204)
+  // instead of secp256k1. Same credential shape, same ALLOW/STEP_UP/DENY output —
+  // so the identity is post-quantum end to end alongside the ML-KEM-768 channel.
   app.post('/api/agent/verify', express.json(), (req, res) => {
     const ip = getClientIp(req);
-    const { credential, signature } = req.body ?? {};
+    const { credential, signature, alg, publicKey } = req.body ?? {};
     if (!credential || !signature) {
       res.status(400).json({ error: 'MISSING_FIELDS', required: ['credential', 'signature'] }); return;
     }
+    const isPq = alg === 'ml-dsa-65';
+    if (isPq && typeof publicKey !== 'string') {
+      res.status(400).json({ error: 'MISSING_FIELDS', required: ['publicKey (for alg=ml-dsa-65)'] }); return;
+    }
     const trusted = (process.env.TRUSTED_AGENT_ISSUERS || '')
       .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-    const check = verifyAgentCredential(credential, signature,
-      trusted.length ? { trustedIssuers: new Set(trusted) } : {});
+    const opts = trusted.length ? { trustedIssuers: new Set(trusted) } : {};
+    const check = isPq
+      ? verifyMlDsaCredential(credential, signature, publicKey, opts)
+      : verifyAgentCredential(credential, signature, opts);
     // Behavior risk for this caller: Frankenstein score (0..1), blended with TLS risk.
     const behaviorRisk = Math.max(checkConsistency(req) / 100, lastTlsRisk ?? 0);
     const decision = agentTrustDecision(check, behaviorRisk);
@@ -1287,6 +1297,7 @@ async function startServer() {
     res.json({
       verified: check.valid,
       reason: check.reason,
+      alg: isPq ? 'ml-dsa-65' : 'secp256k1',
       agent_id: check.agentId ?? null,
       reputation: check.reputation ?? null,
       signer: check.signer ?? null,

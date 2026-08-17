@@ -376,6 +376,21 @@ Agent Identity & Credentials — REAL (new 2026-08-16, P1.4)
     that blends verifiable identity + reputation with the request's behavior
     risk. 15 unit tests (real sign+recover roundtrip, expiry, signer-mismatch, tamper).
 
+    Post-quantum path (P2.8, 2026-08-17): the same /api/agent/verify also accepts
+    a credential signed with ML-DSA-65 (Dilithium3, NIST FIPS 204) — send
+    alg='ml-dsa-65' + publicKey (hex). ECDSA/secp256k1 is broken by a
+    cryptographically-relevant quantum computer; ML-DSA is a lattice scheme that is
+    not. Because an ML-DSA key is not an Ethereum address, the credential's issuer
+    for this path is a fingerprint of the public key ("pq:"+sha256(pk)[:40]), and
+    verification requires the presented key to match that fingerprint (stops a key
+    swap) AND the ML-DSA signature over the canonical message to validate. Same
+    ALLOW/STEP_UP/DENY output via the algorithm-agnostic agentTrustDecision. With
+    the ML-KEM-768 channel (L1) the agent identity is now post-quantum end to end:
+    PQ key exchange + PQ signature. verifyMlDsaCredential in agentIdentity.ts (via
+    @noble/post-quantum), 9 unit tests incl. a FIPS 204 keygen KAT, tamper,
+    key-fingerprint mismatch, wrong-key, expiry, trusted-issuer. Verified live on
+    prod (real ML-DSA sig → 200 ALLOW, tamper → BAD_SIGNATURE).
+
 L6 Host-Telemetry Feed — REAL and LIVE (userspace fallback added 2026-08-16)
     The README's "L6 eBPF" is a host-telemetry feed (process-exec / TCP-connect
     velocity + live RTT), surfaced as phoenix_exec / phoenix_tcp / phoenix_rtt_ms

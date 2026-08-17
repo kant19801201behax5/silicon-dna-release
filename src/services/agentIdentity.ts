@@ -14,6 +14,8 @@
 
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { keccak_256 } from '@noble/hashes/sha3';
+import { sha256 } from '@noble/hashes/sha2';
+import { ml_dsa65 } from '@noble/post-quantum/ml-dsa.js';
 
 const enc = new TextEncoder();
 const toHex = (b: Uint8Array) => '0x' + Buffer.from(b).toString('hex');
@@ -110,6 +112,77 @@ export function verifyAgentCredential(
   if (signer !== c.issuer.toLowerCase()) return { valid: false, reason: 'SIGNER_MISMATCH', signer };
   if (opts.trustedIssuers && !opts.trustedIssuers.has(signer)) return { valid: false, reason: 'UNTRUSTED_ISSUER', signer };
   return { valid: true, reason: 'OK', agentId: c.agentId, reputation: c.reputation, signer };
+}
+
+// ── Post-quantum agent credentials (P2.8) ────────────────────────────────────
+// The classical path above proves control of a secp256k1 key (secure today, but a
+// cryptographically-relevant quantum computer breaks ECDSA). This path proves the
+// same credential with ML-DSA-65 (Dilithium3, NIST FIPS 204) — lattice signatures
+// that survive quantum attack. Together with the ML-KEM-768 channel (L1), the agent
+// identity is now post-quantum end to end: PQ key exchange + PQ signature.
+//
+// Since an ML-DSA public key isn't an Ethereum address, the credential's `issuer`
+// for this path is a fingerprint of the public key ("pq:" + hex(sha256(pk))[:40]),
+// and verification requires the caller to present that public key. Binding the
+// credential to fingerprint(pk) stops a swap to an attacker-chosen key.
+
+export const ML_DSA_PUBLICKEY_BYTES = 1952;
+export const ML_DSA_SIGNATURE_BYTES = 3309;
+
+const hexToBytes = (hex: string): Uint8Array => {
+  const h = hex.startsWith('0x') ? hex.slice(2) : hex;
+  if (h.length % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(h)) throw new TypeError('invalid hex');
+  return Uint8Array.from(Buffer.from(h, 'hex'));
+};
+
+/** Stable fingerprint of an ML-DSA public key: "pq:" + first 40 hex of sha256(pk). */
+export function mlDsaFingerprint(publicKey: Uint8Array): string {
+  return 'pq:' + Buffer.from(sha256(publicKey)).toString('hex').slice(0, 40);
+}
+
+/**
+ * Verify a post-quantum (ML-DSA-65) signed agent credential. Confirms the presented
+ * public key matches the declared `issuer` fingerprint, the ML-DSA signature over the
+ * canonical credential message is valid, and the credential hasn't expired. Returns
+ * the same CredentialCheck shape as the classical path, so agentTrustDecision works
+ * unchanged. `nowSec` injectable for tests.
+ */
+export function verifyMlDsaCredential(
+  c: AgentCredential,
+  signatureHex: string,
+  publicKeyHex: string,
+  opts: { trustedIssuers?: Set<string>; nowSec?: number } = {},
+): CredentialCheck {
+  const now = opts.nowSec ?? Math.floor(Date.now() / 1000);
+  if (!c || typeof c.agentId !== 'string' || !c.agentId) return { valid: false, reason: 'BAD_AGENT_ID' };
+  if (typeof c.issuer !== 'string' || !/^pq:[0-9a-f]{40}$/.test(c.issuer)) return { valid: false, reason: 'BAD_ISSUER' };
+  if (!Number.isFinite(c.reputation) || c.reputation < 0 || c.reputation > 10000) return { valid: false, reason: 'BAD_REPUTATION' };
+  if (!Number.isFinite(c.expiry) || c.expiry <= now) return { valid: false, reason: 'EXPIRED' };
+
+  let publicKey: Uint8Array;
+  let signature: Uint8Array;
+  try {
+    publicKey = hexToBytes(publicKeyHex);
+    signature = hexToBytes(signatureHex);
+  } catch {
+    return { valid: false, reason: 'BAD_ENCODING' };
+  }
+  if (publicKey.length !== ML_DSA_PUBLICKEY_BYTES) return { valid: false, reason: 'BAD_PUBLICKEY' };
+  if (signature.length !== ML_DSA_SIGNATURE_BYTES) return { valid: false, reason: 'BAD_SIGNATURE' };
+
+  // The public key must be the one the issuer fingerprint commits to.
+  const fp = mlDsaFingerprint(publicKey);
+  if (fp !== c.issuer) return { valid: false, reason: 'SIGNER_MISMATCH', signer: fp };
+
+  let ok = false;
+  try {
+    ok = ml_dsa65.verify(signature, new TextEncoder().encode(credentialMessage(c)), publicKey);
+  } catch {
+    return { valid: false, reason: 'BAD_SIGNATURE' };
+  }
+  if (!ok) return { valid: false, reason: 'BAD_SIGNATURE' };
+  if (opts.trustedIssuers && !opts.trustedIssuers.has(fp)) return { valid: false, reason: 'UNTRUSTED_ISSUER', signer: fp };
+  return { valid: true, reason: 'OK', agentId: c.agentId, reputation: c.reputation, signer: fp };
 }
 
 export type AgentDecision = 'ALLOW' | 'STEP_UP' | 'DENY';

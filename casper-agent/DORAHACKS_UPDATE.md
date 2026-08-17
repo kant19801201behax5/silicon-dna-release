@@ -617,6 +617,20 @@ replay→REPLAY_ATTACK, `/api/shadow-stats` populates) with the full suite green
   transitions), wired into CI. New metrics `adaptive_sigma2` / `drift_status` /
   `drift_samples` / `drift_events`; verified live on prod (fresh boot → warmup/floor,
   fields served through Cloudflare).
+- **Post-quantum agent identity (P2.8) — the identity is now quantum-safe end to
+  end** — agent credentials were signed with secp256k1 (ECDSA), which a
+  cryptographically-relevant quantum computer breaks. `/api/agent/verify` now also
+  accepts a credential signed with **ML-DSA-65 (Dilithium3, NIST FIPS 204)** — send
+  `alg: "ml-dsa-65"` + the `publicKey` — verified via `@noble/post-quantum`. Since an
+  ML-DSA key isn't an Ethereum address, the credential's issuer for this path is a
+  fingerprint of the public key (`pq:` + sha256(pk)); the presented key must match
+  that fingerprint (no key-swap) and the lattice signature must validate, yielding
+  the same ALLOW/STEP_UP/DENY. Paired with the ML-KEM-768 channel (Layer 1), the
+  agent identity is now **post-quantum end to end: PQ key exchange + PQ signature** —
+  exactly what a long-lived machine economy needs. `verifyMlDsaCredential` in
+  `src/services/agentIdentity.ts`, 9 unit tests including a FIPS 204 keygen KAT,
+  tamper, key-fingerprint mismatch, wrong-key, expiry, and trusted-issuer; wired into
+  CI. Verified live on prod: real ML-DSA signature → `200 ALLOW`, tampered → `BAD_SIGNATURE`.
 
 ## How to Test (step by step)
 
