@@ -15,7 +15,7 @@
     "@noble/curves": "^1.9.7",
     "@noble/hashes": "^1.8.0",
     "@noble/post-quantum": "^0.5.3",
-    "concurrently": "^9.2.1",
+    "concurrently": "^10.0.4",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "express-rate-limit": "^8.6.1",
