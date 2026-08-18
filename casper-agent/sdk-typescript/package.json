@@ -10,7 +10,7 @@
     "demo": "ts-node casper-oracle-reader.ts"
   },
   "dependencies": {
-    "casper-js-sdk": "^3.0.0-rc05"
+    "casper-js-sdk": "^5.1.0"
   },
   "devDependencies": {
     "typescript": "^5.0.0",
