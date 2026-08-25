@@ -25,7 +25,7 @@
 # Python pusher to sign and send real deploys.
 # ─────────────────────────────────────────────────────────────────────────────
 requests>=2.33.0
-python-dotenv>=1.2.2
+python-dotenv>=1.2.3
 
 # ── Optional: only for casper_oracle_pusher.py (on-chain deploys) ────────────
 # Needs a Rust toolchain, see the note above. Install explicitly when required:
