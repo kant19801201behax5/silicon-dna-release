@@ -4,7 +4,9 @@
 > 
 > **Also submitted:** Casper Agentic Buildathon 2026 (`casper-agent/`)
 >
-> 🛡️ **Security hardening summary (what was closed, before→after, how much improved):** [`HARDENING_REPORT.md`](HARDENING_REPORT.md) — P0.1–P2.8 complete, 371 tests, incl. RFC 9497 & FIPS 204 known-answer tests.
+> 🛡️ **Security hardening summary (what was closed, before→after, how much improved):** [`HARDENING_REPORT.md`](HARDENING_REPORT.md) — P0.1–P2.8 complete, 454 tests, incl. RFC 9497 & FIPS 204 known-answer tests.
+>
+> 🔒 **v5.1 (Aug 28, 2026):** eBPF kernel-level security — XDP Threat Shield (drops banned IPs at NIC driver, ~5-20µs) + LSM Agent Guard (kernel sandbox for AI agents). ZK-lite health proofs with x402 payment rails (Base USDC + Hedera HBAR).
 
 ---
 
@@ -165,12 +167,17 @@ This is the data signal that institutional MEV searchers know about but don't pu
 |-----------|-----------|----------|
 | Oracle server (production) | Python, WebSocket | deployed separately, not in this repo |
 | CPU jitter probe | Node.js hrtime() | `probe-worker.mjs` |
+| XDP Threat Shield | eBPF/XDP, BPF C, Python loader | `ebpf/` (prod: /opt/silicon-dna/ebpf/) |
+| LSM Agent Guard | BPF LSM, Python loader | `ebpf/` (prod: /opt/silicon-dna/ebpf/) |
+| ZK-lite Health Proof | HMAC-SHA256 commitment | `/api/health-proof` |
 | Dashboard | React + Vite | `dist/` |
 | Mantle contract | Solidity 0.8.20 | `mantle-agent/TuringOracle.sol` |
 | Mantle pusher | Node.js + ethers v6 | `mantle-agent/mantle_pusher.js` |
 | Casper contract    | Rust, casper-contract 5.1.1 (native, no Odra) | `casper-agent/` |
 
 **Dependencies:** `@google/genai`, `mlkem` (ML-KEM-768), `hash-wasm`, `express`, `ws`, `lru-cache`
+
+**eBPF requirements (production):** Linux kernel ≥ 5.7 with `CONFIG_BPF_LSM=y`, `CONFIG_XDP_SOCKETS=y`, `clang` ≥ 12, `bpftool`
 
 ---
 
