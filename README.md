@@ -62,7 +62,7 @@ Phoenix Zero (DigitalOcean NYC1)
 │
 ↓  Silicon DNA (per-visitor bot-detection cascade, NOT read by the Mantle
 │    pusher above — separate purpose, separate data path)
-│    L0: CPU jitter physics (probe-worker.mjs)
+│    L0: CPU jitter physics (probe-worker.js)
 │    L1: ML-KEM-768 post-quantum channel (NIST FIPS 203)
 │    L2: TLS fingerprint (placeholder pending real JA4 — see src/SILICON_DNA_LAYERS.md)
 │    L3: "Frankenstein" UA/header consistency check
@@ -166,9 +166,9 @@ This is the data signal that institutional MEV searchers know about but don't pu
 | Component | Technology | Location |
 |-----------|-----------|----------|
 | Oracle server (production) | Python, WebSocket | deployed separately, not in this repo |
-| CPU jitter probe | Node.js hrtime() | `probe-worker.mjs` |
-| XDP Threat Shield | eBPF/XDP, BPF C, Python loader | `ebpf/` (prod: /opt/silicon-dna/ebpf/) |
-| LSM Agent Guard | BPF LSM, Python loader | `ebpf/` (prod: /opt/silicon-dna/ebpf/) |
+| CPU jitter probe | Node.js hrtime() | `probe-worker.js` |
+| XDP Threat Shield | eBPF/XDP, BPF C, Python loader | prod: /opt/silicon-dna/ebpf/ (source not in this repo) |
+| LSM Agent Guard | BPF LSM, Python loader | prod: /opt/silicon-dna/ebpf/ (source not in this repo) |
 | ZK-lite Health Proof | HMAC-SHA256 commitment | `/api/health-proof` |
 | Dashboard | React + Vite | `dist/` |
 | Mantle contract | Solidity 0.8.20 | `mantle-agent/TuringOracle.sol` |
@@ -197,9 +197,23 @@ This is the data signal that institutional MEV searchers know about but don't pu
 
 ## Quick Start
 
-The production oracle server that powers `rtt.phoenix-ai.work` runs as a set of Python services on the deployment host — it isn't part of this repo's local quick-start path. To run and test the pieces that are:
+**Requirements:** Node.js >= 20.0.0
 
-**Casper agent (this hackathon's submission):** see [casper-agent/README.md](casper-agent/README.md) — `cd casper-agent/ts-agent && npm install && npm test`
+```bash
+# 1. Install dependencies
+npm install --production
+
+# 2. Configure (optional — runs with defaults)
+cp .env.example .env
+
+# 3. Start the server (pre-compiled binary)
+npm start
+# → Silicon DNA [L0_CORE] Active → http://localhost:3000
+```
+
+> **Note:** This is a binary release. The core server (`server.js`) is a compiled, obfuscated bundle. Source code is proprietary — available to verified judges on request.
+
+**Casper agent (hackathon submission):** see [casper-agent/README.md](casper-agent/README.md) — `cd casper-agent/ts-agent && npm install && npm test`
 
 **Read the live public feed (no setup needed):**
 ```bash

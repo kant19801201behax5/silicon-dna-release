@@ -13,3 +13,17 @@ data/*.json
 data/*.jsonl
 !data/.gitkeep
 *.log
+
+# Source code — this is a binary-only release
+server.ts
+src/services/
+src/middleware/
+src/db/
+src/utils/
+src/sniper.ts
+src/welford.ts
+tests/
+*.bundle.js
+phoenix_userspace_sensor.py
+tsconfig.json
+probe-worker.mjs
