@@ -26,4 +26,3 @@ tests/
 *.bundle.js
 phoenix_userspace_sensor.py
 tsconfig.json
-probe-worker.mjs
