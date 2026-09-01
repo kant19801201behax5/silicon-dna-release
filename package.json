@@ -10,7 +10,7 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "@google/genai": "^1.29.0",
+    "@google/genai": "^2.19.0",
     "@noble/curves": "^1.9.7",
     "@noble/hashes": "^1.8.0",
     "@noble/post-quantum": "^0.5.3",
