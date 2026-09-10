@@ -35,7 +35,7 @@ with the old >0.70/>0.45 cutoffs. That's what's absent — not "no composite
 scoring exists anywhere," which would be wrong. Composite/multi-signal scoring
 is real in three separate, different forms: the 3-class classifier below
 (additive scoring across 6 signals), Golden Seal's Gaussian-decayed
-`trustScore`, and JARVIS's causal R²/ATE engine (separate system, see
+`trustScore`, and the causal R²/ATE engine (separate trading system, see
 `src/CAUSAL_ENGINE.md`). Three real mechanisms instead of the one originally
 claimed, not zero.*
 
@@ -83,7 +83,7 @@ L2  TLS Fingerprint (JA4) — REAL consumption path (2026-08-16), honest null ot
     header ONLY when the request comes from a trusted proxy (`resolveTlsFp` — never
     fabricated, never trusted from an arbitrary client). It computes `tlsRisk` and
     exposes `tls_ja4` / `tls_risk` in /api/silicon-metrics (null = honest
-    "unknown"), and passes the real risk to JARVIS instead of the old constant.
+    "unknown"), and passes the real risk to downstream consumers instead of the old constant.
     JA3 stays obsolete (Chrome 110 randomised extension order, Jan 2023). Behind
     vanilla Cloudflare the raw ClientHello isn't visible, so on prod `tls_ja4` is
     null until a JA4 source is wired: Cloudflare Enterprise's JA4 header, or a
@@ -212,10 +212,10 @@ L9  Network Telemetry Gate — REAL, but this is a separate MCP tool's threshold
 L10 (Removed as a layer of THIS system — but real and live elsewhere) An
     earlier version of this doc described a "Causal Engine Integration" layer
     reading R² and best_var from a causal regression model. That model is
-    real and live — confirmed R²=0.9983 querying JARVIS's `/api/signal`
-    directly — but it's inside JARVIS, a separate trading agent. The
-    relationship runs the other way: Silicon DNA's own trust output is a
-    live input INTO that engine (`silicon_dna:{trust,fresh}` in the same
+    real and live — confirmed R²=0.9983 querying the production trading
+    system's `/api/signal` directly — but it runs inside a separate trading
+    agent. The relationship runs the other way: Silicon DNA's own trust
+    output is a live input INTO that engine (`silicon_dna:{trust,fresh}` in the same
     response), not the reverse. It is not read by, or wired into, Silicon
     DNA's own `server.ts` ban logic. Full detail: `src/CAUSAL_ENGINE.md`.
     Removed as a numbered layer of this cascade, not removed as "doesn't exist."

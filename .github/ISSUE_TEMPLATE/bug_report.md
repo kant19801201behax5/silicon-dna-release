@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a problem with the oracle, Casper agent, or Mantle agent
+about: Report a problem with the oracle, Casper agent, or Silicon DNA identity system
 title: "[BUG] "
 labels: bug
 ---

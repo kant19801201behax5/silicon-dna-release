@@ -11,4 +11,4 @@ Do not open a public GitHub issue for security vulnerabilities. We aim to acknow
 
 ## Scope
 
-This covers the Casper agent (`casper-agent/`) and the Mantle agent (`mantle-agent/`). Private keys, API tokens, and infrastructure endpoints are never committed to this repository — only `.env.example` templates are provided.
+This covers the Casper agent (`casper-agent/`), the core Silicon DNA identity verification system, and the Phoenix Zero RTT oracle. Private keys, API tokens, and infrastructure endpoints are never committed to this repository — only `.env.example` templates are provided.

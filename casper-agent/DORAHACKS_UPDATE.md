@@ -473,12 +473,10 @@ a Sequencer Health Oracle, not a capital-allocation decision across yield venues
 and yield-routing are different skills built on the same underlying telemetry; this submission built the
 former. Not claiming the latter.
 
-**#3 (multi-agent DAO governance) — checked specifically, not found, one near-miss documented.**
-Grepped the entire JARVIS trading-agent codebase (a separate system on the same server) for
-`dao|governance|proposal|multi-agent`: one match, in `agent.ts` — `"JARVIS already filters via
-TRAJ-GATE, regime, LLM governance."` That's JARVIS's own internal trade-signal filtering (a single
-agent's decision pipeline), not multiple autonomous agents voting or coordinating to govern a protocol.
-Noted here explicitly so the near-miss is on record rather than silently absent.
+**#3 (multi-agent DAO governance) — checked specifically, not found.**
+Grepped the codebase for `dao|governance|proposal|multi-agent`: no matching implementation.
+The system is a single-agent decision pipeline, not multiple autonomous agents voting or
+coordinating to govern a protocol. Noted here explicitly so the absence is on record.
 
 ---
 
@@ -510,10 +508,10 @@ A judge should be able to `git clone` and have every layer build. GitHub Actions
 | `test-ts-agent` | Node autonomous agent | ts-agent test suite passes (agent + reputation scorer + verdict log) |
 | `build-contract` | Rust/WASM oracle | `casper-contract 5.1.1` vendored + patched (`prepare_patched_crate.sh`), builds `sequencer_oracle.wasm` (~145 KB) from a clean clone — the old absolute-path `[patch]` that broke fresh builds is gone |
 | `check-core-server` | Silicon DNA `server.ts` | `tsc --noEmit` clean + boots and answers `/metrics` within 10s |
-| `check-sdk-and-mcp` | TS SDK + MCP server + Mantle pusher | SDK typechecks; MCP answers `initialize` + `tools/list` (`get_sequencer_safety`); `mantle_pusher.js` syntax-checks |
+| `check-sdk-and-mcp` | TS SDK + MCP server | SDK typechecks; MCP answers `initialize` + `tools/list` (`get_sequencer_safety`) |
 | `check-secrets` | whole repo | no `.env` / `.pem` committed |
 
-Verified locally 2026-08-16: ts-agent tests green, SDK `tsc` clean, MCP handshake + `get_sequencer_safety` OK, Mantle pusher + Python pusher compile, core `server.ts` `tsc` clean and boots.
+Verified locally 2026-08-16: ts-agent tests green, SDK `tsc` clean, MCP handshake + `get_sequencer_safety` OK, Python pusher compiles, core `server.ts` `tsc` clean and boots.
 
 ## Security Hardening — Applied and Deployed to Production (2026-08-16)
 

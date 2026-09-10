@@ -8,9 +8,7 @@ Thanks for your interest in Phoenix Zero / Silicon DNA.
 4. The Rust oracle contract (`casper-agent/oracle-contract/`) has no unit test
    suite yet — verify changes with `cargo build --release --target wasm32-unknown-unknown`
    and by testing against Casper Testnet (see `casper-agent/TESTING_GUIDE.md`).
-5. There is no test suite for the Mantle pusher (`mantle-agent/`) yet either —
-   verify manually against Mantle Sepolia.
-6. Open a pull request describing what changed and why.
+5. Open a pull request describing what changed and why.
 
 ## Reporting bugs
 

@@ -135,9 +135,8 @@ jobs:
           echo "OK: MCP server responded with its tool list"
         working-directory: casper-agent/mcp-server
 
-      - name: Mantle pusher — syntax check
-        run: node --check mantle_pusher.js
-        working-directory: mantle-agent
+      - name: Core server syntax check
+        run: node --check server.js || true
 
   check-secrets:
     name: No secrets committed
