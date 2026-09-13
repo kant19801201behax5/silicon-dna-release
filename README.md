@@ -2,9 +2,9 @@
 
 > **Arbitrum Open House Singapore 2026** · **ETHOnline 2026** · **Casper Agentic Buildathon 2026**
 >
-> Academic paper: [IACR ePrint 2026/111419](https://eprint.iacr.org/2026/111419) · [Zenodo DOI 10.5281/zenodo.22239862](https://doi.org/10.5281/zenodo.22239862)
+> Academic paper: [Zenodo DOI 10.5281/zenodo.22239862](https://doi.org/10.5281/zenodo.22239862)
 >
-> Security hardening summary: [`HARDENING_REPORT.md`](HARDENING_REPORT.md) — P0.1-P2.8 complete, 581 tests across 29 files
+> Security hardening summary: [`HARDENING_REPORT.md`](HARDENING_REPORT.md) — P0.1-P2.8 complete, 595 tests across 31 files
 
 ---
 
@@ -168,8 +168,8 @@ Full analysis with raw data: [`proof/mev_war_2026-05-31.md`](proof/mev_war_2026-
 | Analysis dataset | **206,040** feed records (May 31 MEV-war study) |
 | Documented lead time | **3 minutes** (May 31, 2026 — 72.1% MEV war) |
 | Secondary lead time | **27 seconds** (May 17, 2026 — RTT spike to Base revert threshold) |
-| Production services | **10** (systemd-managed on DO droplet) |
-| Test suite | **581 tests** across 29 files |
+| Production services | **15** (systemd-managed on DO droplet) |
+| Test suite | **595 tests** across 31 files |
 
 ---
 
@@ -294,7 +294,6 @@ curl https://rtt.phoenix-ai.work/api/public-feed
 
 ## Academic Publication
 
-- **IACR ePrint:** [2026/111419](https://eprint.iacr.org/2026/111419)
 - **Zenodo:** [DOI 10.5281/zenodo.22239862](https://doi.org/10.5281/zenodo.22239862)
 
 The paper documents the physical-layer NIC fingerprinting methodology and 12-chain correlation analysis (R_xy) that underpins Silicon DNA's identity verification.
