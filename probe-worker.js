@@ -1,29 +1,24 @@
-import { parentPort } from 'node:worker_threads';
 
-// Deterministic micro-workload — mirrors src/services/jitterProbe.ts microWorkload
-// (which is unit-tested). Timing THIS captures real CPU/scheduler/cache jitter.
-// The old probe timed two adjacent hrtime.bigint() calls with nothing between them,
-// so every delta was just call overhead — near-constant, no physical signal.
-function microWorkload(rounds) {
-  let acc = 0 >>> 0;
+import { parentPort } from 'node:worker_threads';
+import { createHash } from 'node:crypto';
+
+function microWorkload(rounds = 1000) {
+  let buf = Buffer.alloc(32, 0);
   for (let i = 0; i < rounds; i++) {
-    acc = (acc + ((i * 2654435761) >>> 0)) >>> 0;
-    acc ^= acc >>> 13;
-    acc = (acc * 5) >>> 0;
+    buf = createHash('sha256').update(buf).digest();
   }
-  return acc >>> 0;
+  return buf.readUInt32LE(0);
 }
+
+let workloadSink = 0;
 
 function startProbe() {
   const integrityCheck = () => {
-    // eBPF LSM-hook simulation: verify the probe's own source wasn't tampered with.
     const source = startProbe.toString();
     if (source.length < 300 || !source.includes('hrtime')) {
-      parentPort?.postMessage({ type: 'INTEGRITY_FAIL' });
+        parentPort?.postMessage({ type: 'INTEGRITY_FAIL' });
     }
   };
-
-  let sink = 0 >>> 0; // consume the workload result so the JIT can't elide the loop
 
   setInterval(() => {
     integrityCheck();
@@ -32,13 +27,14 @@ function startProbe() {
 
     for (let i = 0; i < samples; i++) {
       const start = process.hrtime.bigint();
-      sink = (sink ^ microWorkload(256)) >>> 0; // real work — timing carries the jitter
+      workloadSink = microWorkload();
       const end = process.hrtime.bigint();
-      deltas.push(Number(end - start));
+      const delta = Number(end - start);
+      deltas.push(delta);
     }
 
     if (parentPort) {
-      parentPort.postMessage({ type: 'JITTER_DATA', deltas, sink });
+      parentPort.postMessage({ type: 'JITTER_DATA', deltas, sink: workloadSink });
     }
   }, 200);
 }

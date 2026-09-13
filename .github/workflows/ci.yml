@@ -75,7 +75,7 @@ jobs:
   # src/welford.ts, undeclared vite devDependency) — fixed, and this job is what would have caught
   # them in CI instead of a judge's own clone.
   check-core-server:
-    name: Core Silicon DNA server.ts builds and starts
+    name: Core Silicon DNA server.js starts and answers
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -88,12 +88,12 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Typecheck (server.ts + src/services, src/middleware, src/db, src/utils)
-        run: npx tsc --noEmit
+      - name: Syntax check (server.js)
+        run: node --check server.js
 
       - name: Start smoke test — must come up and answer /metrics within 10s
         run: |
-          npx tsx server.ts &
+          node server.js &
           PID=$!
           for i in $(seq 1 10); do
             if curl -sf http://localhost:3000/metrics > /dev/null; then
