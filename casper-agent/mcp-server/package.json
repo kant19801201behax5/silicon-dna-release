@@ -1,6 +1,7 @@
 {
   "name": "phoenix-zero-casper-mcp-server",
   "version": "1.0.0",
+  "mcpName": "io.github.kant19801201behax5/phoenix-zero-casper-mcp-server",
   "description": "MCP server exposing Phoenix Zero's live sequencer-safety oracle as tools for MCP-compatible AI agents",
   "main": "index.js",
   "bin": {
@@ -9,6 +10,33 @@
   "scripts": {
     "start": "node index.js"
   },
+  "keywords": [
+    "mcp",
+    "modelcontextprotocol",
+    "oracle",
+    "ethereum",
+    "layer2",
+    "sequencer",
+    "mev",
+    "casper",
+    "web3"
+  ],
+  "author": "Kent <aleksandrkent64@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://phoenix-zero.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kant19801201behax5/silicon-dna-release.git",
+    "directory": "casper-agent/mcp-server"
+  },
+  "bugs": {
+    "url": "https://github.com/kant19801201behax5/silicon-dna-release/issues"
+  },
+  "files": [
+    "index.js",
+    "README.md",
+    ".env.example"
+  ],
   "dependencies": {
     "@hono/node-server": "^2.0.11",
     "@modelcontextprotocol/sdk": "^1.29.0"

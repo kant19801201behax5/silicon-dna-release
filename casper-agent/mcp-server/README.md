@@ -18,7 +18,7 @@ safety thresholds (`arb_revert < 15%`, `base_p99 < 500ms`).
 | Tool | Returns |
 |---|---|
 | `get_sequencer_safety` | `{ safe, reason, arb_revert_pct, base_p99_ms, ts }` — the same safe/unsafe decision the on-chain oracle publishes |
-| `get_oracle_state` | Full raw latest measurement across all 6 monitored chains |
+| `get_oracle_state` | Full raw latest measurement across all 12 monitored chains |
 | `get_rwa_settlement_signal` | Network safety (incl. Casper's own P99) + Kraken CSPR/USD liquidity + identity-screening context, combined into one `ready_to_settle` verdict for tokenized real-world-asset (RWA) settlement — see below |
 | `explain_settlement_decision` | Same signals, explained in plain language by a real LLM call (OpenRouter) — see below. Optional; the other three tools need no configuration |
 

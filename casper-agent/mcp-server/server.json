@@ -1,0 +1,23 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.kant19801201behax5/phoenix-zero-casper-mcp-server",
+  "description": "Live L2 sequencer-safety oracle as MCP tools. Tells an agent whether it is safe to submit a transaction right now on Base, Arbitrum, Optimism, zkSync, Mantle or Casper, so it does not burn gas on transactions that will revert.",
+  "version": "1.0.0",
+  "websiteUrl": "https://phoenix-zero.vercel.app",
+  "repository": {
+    "url": "https://github.com/kant19801201behax5/silicon-dna-release",
+    "source": "github",
+    "subfolder": "casper-agent/mcp-server"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "phoenix-zero-casper-mcp-server",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
