@@ -1,4 +1,32 @@
-# Phoenix Zero × Silicon DNA — Casper Sequencer Health Oracle
+# Phoenix Zero × Silicon DNA — Casper Network Health Oracle
+
+> **Status 2026-09-30 (Casper Forward).** Phoenix Zero × Silicon DNA runs in production; the Casper Mainnet
+> deployment is the next step. This folder is the Casper integration: the on-chain oracle contract, its
+> publishing agent, the TypeScript SDK, the MCP server and the RWA settlement gate.
+
+## Live links
+
+1. **Live product:** https://rtt.phoenix-ai.work — Casper dashboard: https://rtt.phoenix-ai.work/casper
+2. **Signed live verdict for Casper Mainnet (no signup):** https://rtt.phoenix-ai.work/api/v1/demo/safe?chain=casper
+3. **Casper Testnet deployments:**
+   oracle contract package https://testnet.cspr.live/contract-package/2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a ·
+   RwaSettlementGate https://testnet.cspr.live/contract-package/fab9c0a11314515796efddc5f5f98e0681cbdc717a2787a75a313cb5cb42511d
+
+## What runs today
+
+- 12 networks, Casper Mainnet included, measured every 2 seconds against independent RPC nodes; Casper Mainnet
+  across 10 nodes (the public node plus 9 validator nodes with open JSON-RPC).
+- Per record: RPC latency (min, spread, p95/p99), stall / slow-degradation flags, head block height and age,
+  node lag, request loss, chain halt detection, revert ratio (Base, Arbitrum, Optimism), Ethereum blob fee and
+  gas pressure, kernel-level TLS round-trip via eBPF. ~2 million records/day, signed BLAKE3 + Ed25519;
+  paid answers signed EIP-191.
+- x402 v2 payments ($0.01 USDC) live on Base, Polygon and Arbitrum One mainnets.
+- The Casper integration (contract + publishing agent) was validated on Casper Testnet; the next deployment
+  is Casper Mainnet.
+
+---
+
+## Casper Agentic Buildathon 2026 submission (July 2026, kept for history)
 
 > **Casper Agentic Buildathon 2026 — Final Round** submission
 > Track (per the rules): the buildathon runs a **single** track — the Casper Innovation Track.
@@ -33,14 +61,14 @@ primitives that machine-to-machine settlement needs before it can be trusted wit
 
 **Submission requirements:** public repo ✅ (this one) · demo video ✅
 ([52 s, Casper-specific](https://youtu.be/KtTrz23B92w)) · working prototype on Casper Testnet ✅
-(contract hash below, receiving `update()` right now) · documentation ✅ (this README +
+(contract hash below; it received `update()` every 5 minutes during the buildathon) · documentation ✅ (this README +
 [TESTING_GUIDE.md](./TESTING_GUIDE.md), which walks a judge through on-chain verification step by step).
 
 ---
 
 ## What This Is
 
-An autonomous agent that monitors 6 blockchain sequencers in real time and publishes verified safety data to a **Casper Testnet smart contract** — so any DeFi agent on Casper can check "is it safe to transact right now?" with a single on-chain call.
+An autonomous agent that monitors 12 networks in real time and publishes verified safety data to a **Casper Testnet smart contract** — so any DeFi agent on Casper can check "is it safe to transact right now?" with a single on-chain call.
 
 **Live data since:** March 15, 2026
 **Chains monitored:** Arbitrum, Base, Optimism, zkSync, Mantle, Casper
