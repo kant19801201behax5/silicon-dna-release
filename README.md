@@ -1,10 +1,13 @@
 # Silicon DNA — Physical-Layer Identity Verification for Web3
 
 > **Arbitrum Open House Singapore 2026** · **ETHOnline 2026** · **Casper Agentic Buildathon 2026**
+
+**Try it yourself** (guided, ~3 min, no wallet): https://rtt.phoenix-ai.work/?tour  
+**On-chain registry on Arbitrum:** [`0xD394fFAE51d8fB52187Cf3aE3b014Ddc80Dc7B15`](https://sepolia.arbiscan.io/address/0xD394fFAE51d8fB52187Cf3aE3b014Ddc80Dc7B15) (Arbitrum Sepolia) — source and interface in [x402-health-oracle](https://github.com/kant19801201behax5/x402-health-oracle#on-chain-registry-on-arbitrum)
 >
 > Academic paper: [Zenodo DOI 10.5281/zenodo.22239862](https://doi.org/10.5281/zenodo.22239862)
 >
-> Security hardening summary: [`HARDENING_REPORT.md`](HARDENING_REPORT.md) — P0.1-P2.8 complete, 595 tests across 31 files
+> Security hardening summary: [`HARDENING_REPORT.md`](HARDENING_REPORT.md) — P0.1-P2.8 complete; today 758 TypeScript + 126 Python automated tests pass (Oct 3 2026)
 
 ---
 
@@ -12,19 +15,19 @@
 
 A production identity-verification and network-intelligence system that combines physical-layer bot detection with real-time cross-chain monitoring. Two layers, one stack:
 
-**Layer 1 — Phoenix Zero (Cross-Chain RTT Oracle):** Probes 12 blockchain sequencers every 2 seconds, measuring RTT, revert ratios, stall flags, gas pressure, and blob fees. Publishes verified safety state to on-chain oracle contracts. Live since March 15, 2026.
+**Layer 1 — Phoenix Zero (Cross-Chain RTT Oracle):** Probes 12 blockchain sequencers every 2 seconds, measuring RTT, revert ratios, stall flags, gas pressure, and blob fees. Publishes verified safety state to on-chain oracle contracts (Arbitrum registry, updated every 5 minutes; Casper oracle contract). Live since March 15, 2026.
 
-**Layer 2 — Silicon DNA (9-Gate Bot Detection):** A cascade of independent physical-layer checks — any one of which can ban an IP on its own. Not a single pipeline producing one score, but a defense-in-depth system where CPU jitter physics, post-quantum cryptography, proof-of-work, and behavioral analysis each act independently.
+**Layer 2 — Silicon DNA (14-layer bot detection, L0–L13):** A cascade of independent physical-layer checks — any one of which can ban an IP on its own. Not a single pipeline producing one score, but a defense-in-depth system where CPU jitter physics, post-quantum cryptography, proof-of-work, and behavioral analysis each act independently.
 
-**The core discovery:** transaction revert ratios on Arbitrum (`arb_revert_ratio`) are a causal leading indicator of cross-chain stress events — MEV wars, sequencer stalls, gas spikes. Documented against a 206,040-record production feed snapshot.
+**The core discovery:** transaction revert ratios on Arbitrum (`arb_revert_ratio`) appear to lead cross-chain stress events — MEV wars, sequencer stalls, gas spikes. Documented against a 206,040-record production feed snapshot; a systematic lead-time backtest across weeks of data is in progress.
 
-**Proven:** May 31, 2026 — detected a 72.1% MEV war **3 minutes before the acute stall** on Arbitrum and Base.
+**Case study (single documented event):** May 31, 2026 — detected a 72.1% MEV war **3 minutes before the acute stall** on Arbitrum and Base.
 
 ---
 
 ## Core Technology
 
-### 9-Gate Bot Detection (Silicon DNA)
+### 14-Layer Bot Detection (Silicon DNA)
 
 | Gate | Technology | What It Detects |
 |------|-----------|-----------------|
@@ -56,7 +59,7 @@ Monitors sequencer health across 12 chains every 2 seconds:
 | Blast | EVM L2 |
 | Linea | EVM L2 |
 | Mode | EVM L2 |
-| Polygon zkEVM | EVM L2 |
+| Polygon zkEVM | EVM L2 — **halted since Jul 3 2026**, reported `chain_halted` |
 | Taiko | EVM L2 |
 | Mantle | EVM L2 |
 | Casper | Non-EVM L1 |
@@ -124,7 +127,7 @@ v  Any DeFi agent:
 
 ## Cross-Chain Intelligence: arb_revert_ratio
 
-The key discovery: Arbitrum transaction revert ratios are a **causal leading indicator** of cross-chain stress:
+The key observation: Arbitrum transaction revert ratios **rose ahead of** cross-chain stress in the documented events below (case studies; the systematic lead-time backtest is in progress):
 
 ```
 arb_revert_ratio = (reverted_txns / total_txns) per 2s window
@@ -169,7 +172,7 @@ Full analysis with raw data: [`proof/mev_war_2026-05-31.md`](proof/mev_war_2026-
 | Documented lead time | **3 minutes** (May 31, 2026 — 72.1% MEV war) |
 | Secondary lead time | **27 seconds** (May 17, 2026 — RTT spike to Base revert threshold) |
 | Production services | **15** (systemd-managed on DO droplet) |
-| Test suite | **595 tests** across 31 files |
+| Test suite | **758 TypeScript + 126 Python** automated tests (Oct 3 2026) |
 
 ---
 
