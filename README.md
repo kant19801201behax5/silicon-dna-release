@@ -1,4 +1,4 @@
-# Silicon DNA — Physical-Layer Identity Verification for Web3
+# Silicon DNA — Behavioral Identity for AI Agents and Web3
 
 > **Arbitrum Open House Singapore 2026** · **ETHOnline 2026** · **Casper Agentic Buildathon 2026**
 
@@ -7,17 +7,17 @@
 >
 > Academic paper: [Zenodo DOI 10.5281/zenodo.22239862](https://doi.org/10.5281/zenodo.22239862)
 >
-> Security hardening summary: [`HARDENING_REPORT.md`](HARDENING_REPORT.md) — P0.1-P2.8 complete; today 758 TypeScript + 126 Python automated tests pass (Oct 3 2026)
+> Security hardening summary: [`HARDENING_REPORT.md`](HARDENING_REPORT.md) — P0.1-P2.8 complete; today 855 TypeScript + 190 Python automated tests (Oct 8 2026) pass
 
 ---
 
 ## What This Is
 
-A production identity-verification and network-intelligence system that combines physical-layer bot detection with real-time cross-chain monitoring. Two layers, one stack:
+A production identity-verification and network-intelligence system that combines behavioral caller identity (request timing, headers, post-quantum handshake, proof of work) and kernel-level enforcement with real-time cross-chain monitoring. Two layers, one stack:
 
 **Layer 1 — Phoenix Zero (Cross-Chain RTT Oracle):** Probes 12 blockchain sequencers every 2 seconds, measuring RTT, revert ratios, stall flags, gas pressure, and blob fees. Publishes verified safety state to on-chain oracle contracts (Arbitrum registry, updated every 5 minutes; Casper oracle contract). Live since March 15, 2026.
 
-**Layer 2 — Silicon DNA (14-layer bot detection, L0–L13):** A cascade of independent physical-layer checks — any one of which can ban an IP on its own. Not a single pipeline producing one score, but a defense-in-depth system where CPU jitter physics, post-quantum cryptography, proof-of-work, and behavioral analysis each act independently.
+**Layer 2 — Silicon DNA (14-layer bot detection, L0–L13):** 14 layers describe each caller (the passport shows every layer as pass / fail / pending / n/a); bans are decided by separate rules and enforced in the kernel by eBPF/XDP. Not a single pipeline producing one score, but a defense-in-depth system where CPU jitter physics, post-quantum cryptography, proof-of-work, and behavioral analysis each act independently.
 
 **The core discovery:** transaction revert ratios on Arbitrum (`arb_revert_ratio`) appear to lead cross-chain stress events — MEV wars, sequencer stalls, gas spikes. Documented against a 206,040-record production feed snapshot; a systematic lead-time backtest across weeks of data is in progress.
 
@@ -29,17 +29,42 @@ A production identity-verification and network-intelligence system that combines
 
 ### 14-Layer Bot Detection (Silicon DNA)
 
-| Gate | Technology | What It Detects |
-|------|-----------|-----------------|
-| L0 | CPU jitter physics (`probe-worker.js`) | Real hardware thermal noise vs. VM/sandbox flat signals |
-| L1 | ML-KEM-768 post-quantum channel (NIST FIPS 203) | Clients that cannot complete a real PQC handshake |
-| L2 | TLS JA4 fingerprint (`tlsFingerprint.ts`) | Browser/client identity via ClientHello analysis |
-| L3 | Frankenstein UA/header consistency | Mismatched User-Agent vs. actual platform capabilities |
-| L4 | Argon2id proof-of-work | ASIC spoofing, slow-time replay, GPU/UA inconsistency, WebDriver artifacts |
-| L5 | Synthetic-rhythm detector | Automated scripts with unnaturally regular timing |
-| L6 | Host telemetry gate (userspace sensor) | Process exec / TCP connect / RTT anomalies via `/proc` |
-| L7 | Spearman stall detector | Static-script correlation patterns |
-| L8 | Network telemetry gate | Cross-chain tension and latency anomalies |
+**Caller label and agent passport.**
+
+Every response of the paid gateway (`/v1/*`, both 402 and 200) carries a label for the **caller**:
+`X-Silicon-DNA-Class` (HUMAN / LEGIT_AGENT / MALICIOUS_BOT / SYBIL), `-Confidence`, `-Layers` (passed/14), `-Layers-Applicable`,
+`-Timing-Intervals`, `-Timing` (insufficient / human_like / agent_like / bot_like), `-Paid` (settled payments of this caller), `-Passport`.
+The label never blocks a request: a bot-like caller still receives the normal 402, so directories that list the oracle keep seeing the payment terms.
+
+`GET /api/agent/passport` returns the full passport with an **Ed25519 signature**. Verify it without trusting the server: take `signed_payload`
+and `signature_ed25519` from the answer and the public key from `/.well-known/silicon-dna-key.json` (the page explains the check in Node and Python).
+The `payment` block comes from settlements confirmed by the x402 facilitator.
+
+**Honest limit:** the timing layers (L3, L4, L6, L7) need ≥ 20 request intervals from the same caller. Most API callers make fewer, so their
+class rests on headers and request rate until enough history accumulates (measured 8 Oct 2026: 2 of 30 outside callers had ≥ 20 intervals).
+
+**The 14 layers:**
+
+| ID | Layer | What is checked | n/a when |
+|----|-------|-----------------|----------|
+| L0 | PQC channel (ML-KEM-768) | a real ML-KEM-768 handshake over WebSocket | API clients without the handshake |
+| L1 | Header consistency (strict) | Frankenstein score < 50 | never |
+| L2 | Header consistency (puppet) | Frankenstein score < 100 | never |
+| L3 | Interval trend (Spearman ρ) | ρ of request intervals ≤ 0.7 | never (pending until 20 intervals) |
+| L4 | Interval regularity (CV) | CV of request intervals ≥ 0.05 (not a metronome) | never (pending until 20 intervals) |
+| L5 | Argon2id proof of work | the client solved a verifiable PoW | API clients without PoW |
+| L6 | Interval entropy (Shannon) | entropy of request intervals ≥ 1 bit | never (pending until 20 intervals) |
+| L7 | Timing verdict | rhythm is human_like or agent_like | never (pending until 20 intervals) |
+| L8 | TLS fingerprint (JA4) | JA4 risk < 0.5 | everyone, until a JA4 source exists (TLS ends at Cloudflare) |
+| L9 | Request rate | < 15 requests per 60 s | never |
+| L10 | Sybil cohort | not in a Sybil cohort | never |
+| L11 | Browser header richness | ≥ 4 browser headers | API clients with fewer such headers |
+| L12 | Geo present | cf-ipcountry is present | never |
+| L13 | Session continuity | PQC session and > 1 interval | API clients without a session |
+
+The numbering is the bit position in the passport's layer map; live table: `GET https://rtt.phoenix-ai.work/api/layers`.
+The layers describe a caller — they do not ban on their own. Bans are decided by separate rules (velocity, Spearman on the web path,
+Sybil binding) and enforced in the kernel by eBPF/XDP.
 
 **Additional systems:** 3-class classifier (HUMAN / LEGIT_AGENT / MALICIOUS_BOT), Golden Seal timing-rhythm protocol, EIP-191 wallet-to-fingerprint binding with KL-divergence Sybil clustering, Trust Engine fusion layer (OPA/SPIFFE-inspired graduated ALLOW/STEP_UP/SHADOW_LIMIT/DENY decisions), Privacy Pass anonymous tokens (RFC 9497 OPRF), drift-adaptive anomaly calibration (P2 quantile + Page-Hinkley change detection).
 
@@ -74,7 +99,7 @@ Each probe calls `eth_blockNumber` / `eth_gasPrice` / `debug_traceBlock` (EVM) o
 
 ### eBPF/XDP Kernel Enforcement (Production)
 
-- **XDP Threat Shield:** Drops banned IPs at the NIC driver level (~5-20us latency)
+- **XDP Threat Shield:** Drops banned IPs at the NIC driver level (run time of the XDP program: 927 ns per packet on average (measured 8 Oct 2026 with the kernel's BPF run counters, generic mode on virtio_net))
 - **LSM Agent Guard:** Kernel sandbox restricting AI agent file/network/process access
 - Requires Linux kernel >= 5.7 with `CONFIG_BPF_LSM=y`, `CONFIG_XDP_SOCKETS=y`
 
@@ -108,7 +133,7 @@ Phoenix Zero (DigitalOcean NYC1, live since March 2026)
 v  /api/public-feed  (public JSON, no auth)
 |
 |  Silicon DNA (per-visitor bot-detection cascade, separate data path)
-|    9 independent gates — any one bans on its own
+|    14 layers describe each caller (passport, X-Silicon-DNA-* label on every oracle response)
 |    3-class classifier, Golden Seal, wallet-Sybil binding
 |    Trust Engine fusion layer (graduated ALLOW/DENY)
 |    Privacy Pass anonymous tokens (RFC 9497)
@@ -172,7 +197,7 @@ Full analysis with raw data: [`proof/mev_war_2026-05-31.md`](proof/mev_war_2026-
 | Documented lead time | **3 minutes** (May 31, 2026 — 72.1% MEV war) |
 | Secondary lead time | **27 seconds** (May 17, 2026 — RTT spike to Base revert threshold) |
 | Production services | **15** (systemd-managed on DO droplet) |
-| Test suite | **758 TypeScript + 126 Python** automated tests (Oct 3 2026) |
+| Test suite | **855 TypeScript + 190 Python automated tests (Oct 8 2026)** |
 
 ---
 
@@ -299,7 +324,7 @@ curl https://rtt.phoenix-ai.work/api/public-feed
 
 - **Zenodo:** [DOI 10.5281/zenodo.22239862](https://doi.org/10.5281/zenodo.22239862)
 
-The paper documents the physical-layer NIC fingerprinting methodology and 12-chain correlation analysis (R_xy) that underpins Silicon DNA's identity verification.
+The paper documents the 12-chain RTT correlation analysis (R_xy), kernel-level enforcement (eBPF/XDP) and the request-timing layers; physical-layer NIC fingerprinting is described there as future work.
 
 ---
 
