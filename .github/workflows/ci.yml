@@ -38,11 +38,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust nightly + wasm32 + rust-src
+      - name: Install the Rust nightly pinned in rust-toolchain.toml + wasm32 + rust-src
+        # Not a floating `nightly`: casper-contract uses unstable compiler features, and a later nightly removed one of them
+        # (core::intrinsics::abort is already missing in the nightly of 2026-10-07), so an unpinned build stopped compiling with no change
+        # in this repository. The channel is read from the file, so the pin lives in one place.
         run: |
-          rustup toolchain install nightly --profile minimal
-          rustup target add wasm32-unknown-unknown --toolchain nightly
-          rustup component add rust-src --toolchain nightly
+          CH=$(awk -F'"' '/^channel/ {print $2}' rust-toolchain.toml)
+          echo "pinned toolchain: $CH"
+          rustup toolchain install "$CH" --profile minimal --component rust-src --target wasm32-unknown-unknown
+        working-directory: casper-agent/oracle-contract
 
       - name: Vendor + patch casper-contract 5.1.1
         # Invoked through `bash` rather than `./` on purpose. The executable bit is set in git, but a
@@ -54,7 +58,7 @@ jobs:
       - name: Build WASM
         run: |
           RUSTFLAGS="-C link-arg=--import-undefined -C target-cpu=mvp" \
-            cargo +nightly build -Z build-std=core,alloc --release --target wasm32-unknown-unknown
+            cargo build -Z build-std=core,alloc --release --target wasm32-unknown-unknown
         working-directory: casper-agent/oracle-contract
 
       - name: Check artefact exists and is a sane size
