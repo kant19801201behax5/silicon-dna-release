@@ -24,7 +24,7 @@
 # Install the two lines below and the demo runs. Add pycspr only if you want the
 # Python pusher to sign and send real deploys.
 # ─────────────────────────────────────────────────────────────────────────────
-requests>=2.33.0
+requests>=2.34.2
 python-dotenv>=1.2.2
 
 # ── Optional: only for casper_oracle_pusher.py (on-chain deploys) ────────────
