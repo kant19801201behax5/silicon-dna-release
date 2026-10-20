@@ -279,13 +279,13 @@ Note: the SequencerOracle contract used `EntryPointType::Caller` initially, whic
 
 ## Quick Start
 
-**Requirements:** Node.js >= 20.0.0
+**Requirements:** Node.js >= 20.19.0 (the bundled post-quantum crypto is an ES module; older Node 20 cannot load it)
 
 ```bash
 # 1. Install dependencies
 npm install --production
 
-# 2. Configure (optional -- runs with defaults)
+# 2. Configure (optional -- runs with defaults: NODE_ENV=production, port 3000)
 cp .env.example .env
 
 # 3. Start the server (pre-compiled binary)
