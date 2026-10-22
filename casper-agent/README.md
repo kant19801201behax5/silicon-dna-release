@@ -3,6 +3,10 @@
 > **Status 2026-09-30 (Casper Forward).** Phoenix Zero × Silicon DNA runs in production; the Casper Mainnet
 > deployment is the next step. This folder is the Casper integration: the on-chain oracle contract, its
 > publishing agent, the TypeScript SDK, the MCP server and the RWA settlement gate.
+>
+> **Status 2026-10-22: Testnet publishing is paused since 10 Sep 2026** — the publisher account ran out of testnet
+> CSPR and the publishing agent is not running (15,689 `update()` calls before that). Casper Mainnet itself is
+> still measured live (10 nodes, every 2 seconds). Figures below describe the buildathon period (July 2026).
 
 ## Live links
 
@@ -48,7 +52,7 @@ now, not planned:
 
 | Focus area | What is actually running | How to check it yourself |
 | --- | --- | --- |
-| **Agentic AI** | A Node.js agent perceives (public feed), holds a goal (don't waste gas), decides (safe/unsafe) and acts on-chain (`update()`) every 5 min, 24/7, no human in the loop. **11,340** `update()` calls on the active contract, **170** autonomous pauses, **425 CSPR** of gas saved, **57,808 min** uptime with 0 restarts | `ts-agent/` + testnet explorer; `DRY_RUN=true` reproduces the decision loop locally |
+| **Agentic AI** | A Node.js agent perceives (public feed), holds a goal (don't waste gas), decides (safe/unsafe) and acted on-chain (`update()`) every 5 min, 24/7, no human in the loop, during the buildathon (paused since 10 Sep 2026). **11,340** `update()` calls on the active contract, **170** autonomous pauses, **425 CSPR** of gas saved, **57,808 min** uptime with 0 restarts | `ts-agent/` + testnet explorer; `DRY_RUN=true` reproduces the decision loop locally |
 | **DeFi** | Any Casper DeFi agent can gate a transaction on `is_safe()` in one on-chain call. TypeScript SDK reads the live contract; x402 endpoint monetises the same data at $0.01/call (`HTTP 402` with a real payment challenge) | `sdk-typescript/` demo prints EXECUTE/BLOCK per transaction; `curl -i https://rtt.phoenix-ai.work/api/v1/safe` |
 | **RWA** | Regulated RWA settlement needs a network-safety check, real market liquidity, and counterparty screening. `get_rwa_settlement_signal` (MCP tool) combines all three — network safety now includes a calibrated Casper-native P99 threshold, plus live CSPR/USD liquidity read from Kraken's public API — into one `ready_to_settle` verdict. As of 2026-07-29 the same logic also exists as an on-chain contract (`RwaSettlementGate`, built with Odra) any other Casper contract can call directly via `is_settlement_allowed()` | `mcp-server/` — call the tool; `rwa-settlement-gate/` — contract source; [testnet explorer](https://testnet.cspr.live/contract-package/fab9c0a11314515796efddc5f5f98e0681cbdc717a2787a75a313cb5cb42511d) |
 

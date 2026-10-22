@@ -140,8 +140,8 @@ v  /api/public-feed  (public JSON, no auth)
 |    Post-quantum: ML-KEM-768 channel + ML-DSA-65 signatures
 |
 v  On-chain oracle contracts
-|    Casper Testnet: SequencerOracle (every 5 min)
-|    Casper Testnet: RwaSettlementGate (every 15 min)
+|    Casper Testnet: SequencerOracle (was every 5 min; publishing paused since 10 Sep 2026)
+|    Casper Testnet: RwaSettlementGate (was every 15 min; publishing paused, agent not running)
 |
 v  Any DeFi agent:
      oracle.is_safe() --> true / false
@@ -203,7 +203,7 @@ Full analysis with raw data: [`proof/mev_war_2026-05-31.md`](proof/mev_war_2026-
 
 ## Casper Integration (Primary On-Chain)
 
-**Active contract (live, receiving `update()` calls every 5 min):**
+**Testnet contract — publishing paused since 10 Sep 2026** (the publisher account ran out of testnet CSPR and the publishing agent is not running; 15,689 `update()` calls before that). Casper Mainnet itself is still measured live: 10 nodes, every 2 seconds. The figures in the table below are from the buildathon period (July 2026).
 
 | Item | Value |
 |------|-------|
