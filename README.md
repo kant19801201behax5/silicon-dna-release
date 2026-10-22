@@ -116,7 +116,7 @@ GET https://rtt.phoenix-ai.work/api/v1/safe
 --> {"safe": true, "base_p99_ms": 82, "revert_ratio": 0.04}
 ```
 
-Currently settled on Base mainnet. First revenue: $0.02 USDC (September 1, 2026). 7 x402 endpoints, 2 verified settlements on Base.
+Currently settled on Base mainnet. On-chain count as of 20 Oct 2026: 19 external payments from 10 wallets, $0.19 USDC in total (first payment 1 Sep 2026). 7 x402 endpoints.
 
 ---
 
@@ -152,7 +152,7 @@ v  Any DeFi agent:
 
 ## Cross-Chain Intelligence: arb_revert_ratio
 
-The key observation: Arbitrum transaction revert ratios **rose ahead of** cross-chain stress in the documented events below (case studies; the systematic lead-time backtest is in progress):
+The key observation: Arbitrum transaction revert ratios **rose ahead of** cross-chain stress in the documented events below (case studies; a 22-day systematic backtest, 17 Sep – 9 Oct 2026, found only weak lead signals — AUC 0.60 or lower):
 
 ```
 arb_revert_ratio = (reverted_txns / total_txns) per 2s window
@@ -165,7 +165,7 @@ MEV war:   0.72       (72%) -- May 31 event
 **Why this is valuable:**
 - MEV bots start sandwiching transactions --> revert ratio rises
 - This happens **before** gas prices spike (which is what everyone else watches)
-- Lead time is actionable: 3 minutes on the May 31 event documented in [`proof/`](proof/mev_war_2026-05-31.md), 27 seconds on the May 17 Base event
+- Lead time on the two documented events: 3 minutes on May 31 ([`proof/`](proof/mev_war_2026-05-31.md)) and 27 seconds on the May 17 Base event. These are single events; the 22-day backtest did not confirm a general lead time
 - This is the data signal that institutional MEV searchers know about but do not publish
 
 ---
@@ -194,8 +194,8 @@ Full analysis with raw data: [`proof/mev_war_2026-05-31.md`](proof/mev_war_2026-
 | Chains monitored | **12** (Arbitrum, Base, Optimism, zkSync, Scroll, Blast, Linea, Mode, Polygon zkEVM, Taiko, Mantle, Casper) |
 | Current throughput | **~258,700 measurements/day** (measured 2026-07-25) |
 | Analysis dataset | **206,040** feed records (May 31 MEV-war study) |
-| Documented lead time | **3 minutes** (May 31, 2026 — 72.1% MEV war) |
-| Secondary lead time | **27 seconds** (May 17, 2026 — RTT spike to Base revert threshold) |
+| Documented lead time (single event) | **3 minutes** (May 31, 2026 — 72.1% MEV war) |
+| Secondary lead time (single event) | **27 seconds** (May 17, 2026 — RTT spike to Base revert threshold) |
 | Production services | **15** (systemd-managed on DO droplet) |
 | Test suite | **855 TypeScript + 190 Python automated tests (Oct 8 2026)** |
 
@@ -203,17 +203,15 @@ Full analysis with raw data: [`proof/mev_war_2026-05-31.md`](proof/mev_war_2026-
 
 ## Casper Integration (Primary On-Chain)
 
-**Testnet contract — publishing paused since 10 Sep 2026** (the publisher account ran out of testnet CSPR and the publishing agent is not running; 15,689 `update()` calls before that). Casper Mainnet itself is still measured live: 10 nodes, every 2 seconds. The figures in the table below are from the buildathon period (July 2026).
+**Casper Testnet contract: updates paused since 10 Sep 2026** (the publishing account ran out of testnet CSPR and the publishing agent is not running; Casper Mainnet itself is still measured live):
 
 | Item | Value |
 |------|-------|
 | Contract hash | [`hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a`](https://testnet.cspr.live/contract/hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a) |
 | Deployed | July 16, 2026 |
 | Deployer wallet | [`0202494268f6507...`](https://testnet.cspr.live/account/0202494268f650725fb759e6b89bde9a44300a89a02b7d72477eff8894c857c5defb) |
-| Casper dashboard | https://rtt.phoenix-ai.work/casper |
-| On-chain updates | **12,302** total (`update()` calls across both contracts) |
-| Safety pauses | **170** autonomous pauses, **425 CSPR** gas saved |
-| Uptime | **57,808 min** continuously, 0 restarts |
+| Dashboard (Casper is one of the 12 networks) | https://rtt.phoenix-ai.work |
+| On-chain updates | **15,689** recorded by the contract before 10 Sep 2026 (last update: 10 Sep 2026) |
 | Testing guide | [casper-agent/TESTING_GUIDE.md](casper-agent/TESTING_GUIDE.md) |
 
 **Original deployment (historical proof, 962 real on-chain `update()` calls over 33 days):**
@@ -224,7 +222,7 @@ Full analysis with raw data: [`proof/mev_war_2026-05-31.md`](proof/mev_war_2026-
 | Deploy TX | [`2578359cc8ffcdac8316d6002d3aabed26888c102c8d69a2ccd3239f3fcd3326`](https://testnet.cspr.live/deploy/2578359cc8ffcdac8316d6002d3aabed26888c102c8d69a2ccd3239f3fcd3326) |
 | On-chain updates | 962 transactions, June 3 - July 6, 2026 |
 
-**RWA Settlement Gate** (second contract, Odra framework, live since 2026-07-29):
+**RWA Settlement Gate** (second contract, Odra framework, deployed 2026-07-29; updates paused — the publishing agent is not running):
 ```
 contract-package-fab9c0a11314515796efddc5f5f98e0681cbdc717a2787a75a313cb5cb42511d
 ```
@@ -265,8 +263,8 @@ Note: the SequencerOracle contract used `EntryPointType::Caller` initially, whic
 
 **x402 monetization (live):**
 1. 7 x402-gated endpoints on Base mainnet
-2. First revenue: $0.02 USDC (September 1, 2026)
-3. 2 verified on-chain settlements
+2. First payment 1 Sep 2026; 19 external payments, $0.19 USDC (on-chain, as of 20 Oct 2026)
+3. Payment networks accepted: Base, Polygon, Arbitrum One (USDC)
 4. x402 Foundation launched July 14, 2026 — 40 organizations (Coinbase, Cloudflare, AWS, Stripe, Visa)
 5. Native Casper x402 payer scaffolded in `casper-agent/casper-x402/`
 
@@ -311,10 +309,10 @@ curl https://rtt.phoenix-ai.work/api/public-feed
 | Main dashboard | https://rtt.phoenix-ai.work |
 | Health endpoint | https://rtt.phoenix-ai.work/api/health |
 | Public feed | https://rtt.phoenix-ai.work/api/public-feed |
-| Casper dashboard | https://rtt.phoenix-ai.work/casper |
+| Dashboard (Casper is one of the 12 networks) | https://rtt.phoenix-ai.work |
 | SequencerOracle (Casper Testnet) | [hash-2a7ebbc9...261f3a](https://testnet.cspr.live/contract/hash-2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a) |
 | RwaSettlementGate (Casper Testnet) | [contract-package-fab9c0a1...b42511d](https://testnet.cspr.live/contract-package/fab9c0a11314515796efddc5f5f98e0681cbdc717a2787a75a313cb5cb42511d) |
-| Demo video (Casper) | https://youtu.be/KtTrz23B92w |
+| Demo video (guided tour) | https://youtu.be/0yQWEGB3EVo |
 | GitHub | https://github.com/kant19801201behax5/silicon-dna-release |
 | DoraHacks (Casper) | https://dorahacks.io/buidl/43859 |
 

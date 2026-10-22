@@ -10,7 +10,7 @@
 
 ## Live links
 
-1. **Live product:** https://rtt.phoenix-ai.work — Casper dashboard: https://rtt.phoenix-ai.work/casper
+1. **Live product:** https://rtt.phoenix-ai.work — Casper is one of the 12 networks on the main dashboard
 2. **Signed live verdict for Casper Mainnet (no signup):** https://rtt.phoenix-ai.work/api/v1/demo/safe?chain=casper
 3. **Casper Testnet deployments:**
    oracle contract package https://testnet.cspr.live/contract-package/2a7ebbc91e4177df0ed3143495b412290733a308a017d084fc7e6662e3261f3a ·
@@ -52,7 +52,7 @@ now, not planned:
 
 | Focus area | What is actually running | How to check it yourself |
 | --- | --- | --- |
-| **Agentic AI** | A Node.js agent perceives (public feed), holds a goal (don't waste gas), decides (safe/unsafe) and acted on-chain (`update()`) every 5 min, 24/7, no human in the loop, during the buildathon (paused since 10 Sep 2026). **11,340** `update()` calls on the active contract, **170** autonomous pauses, **425 CSPR** of gas saved, **57,808 min** uptime with 0 restarts | `ts-agent/` + testnet explorer; `DRY_RUN=true` reproduces the decision loop locally |
+| **Agentic AI** | A Node.js agent perceives (public feed), holds a goal (don't waste gas), decides (safe/unsafe) and acts on-chain (`update()`); during the buildathon it ran every 5 minutes. Casper Testnet publishing has been stopped since 10 Sep 2026 (the publisher account was out of testnet CSPR; the agent is not deployed). The contract recorded **15,689** updates (its own counter, 17 Oct 2026) | `ts-agent/` + testnet explorer; `DRY_RUN=true` reproduces the decision loop locally |
 | **DeFi** | Any Casper DeFi agent can gate a transaction on `is_safe()` in one on-chain call. TypeScript SDK reads the live contract; x402 endpoint monetises the same data at $0.01/call (`HTTP 402` with a real payment challenge) | `sdk-typescript/` demo prints EXECUTE/BLOCK per transaction; `curl -i https://rtt.phoenix-ai.work/api/v1/safe` |
 | **RWA** | Regulated RWA settlement needs a network-safety check, real market liquidity, and counterparty screening. `get_rwa_settlement_signal` (MCP tool) combines all three — network safety now includes a calibrated Casper-native P99 threshold, plus live CSPR/USD liquidity read from Kraken's public API — into one `ready_to_settle` verdict. As of 2026-07-29 the same logic also exists as an on-chain contract (`RwaSettlementGate`, built with Odra) any other Casper contract can call directly via `is_settlement_allowed()` | `mcp-server/` — call the tool; `rwa-settlement-gate/` — contract source; [testnet explorer](https://testnet.cspr.live/contract-package/fab9c0a11314515796efddc5f5f98e0681cbdc717a2787a75a313cb5cb42511d) |
 
@@ -77,7 +77,7 @@ An autonomous agent that monitors 12 networks in real time and publishes verifie
 **Live data since:** March 15, 2026
 **Chains monitored:** Arbitrum, Base, Optimism, zkSync, Mantle, Casper
 **Measurement throughput:** ~258,700/day across the 6 chains (measured off the live feed 2026-07-25); the May 31 study below was run on a 206,040-record feed snapshot
-**Proven:** MEV war May 31, 2026 — 72.1% revert ratio detected 3 minutes early
+**Case study:** MEV war on May 31, 2026 (see `proof/mev_war_2026-05-31.md` in the repository root)
 
 **Market context:** CSPR went live for trading on Kraken July 21, 2026, and Casper has joined **ERC-7943** (RWA tokenization) and contributed to **ERC-3643** (permissioned, compliance-gated issuance). Regulated RWA settlement needs both a network-safety check *and* counterparty identity screening — the two signals this project already provides (network oracle + Silicon DNA identity gate). We don't implement those token standards; see [DORAHACKS_UPDATE.md](./DORAHACKS_UPDATE.md) for the honest framing.
 
@@ -163,7 +163,7 @@ See [mcp-server/README.md](./mcp-server/README.md) for the Claude Desktop config
 
 ### 4. RWA Settlement Gate (`rwa-settlement-gate/`)
 
-A second, additive contract — live on Casper Testnet since 2026-07-29, built with the
+A second, additive contract — deployed on Casper Testnet on 2026-07-29 (updates paused; the publishing agent is not running), built with the
 **Odra** framework (the main oracle above deliberately uses raw WASM instead; this
 contract shows both approaches in the same repo). It turns `get_rwa_settlement_signal`
 from a read-only MCP tool into something any Casper contract can call cross-contract
