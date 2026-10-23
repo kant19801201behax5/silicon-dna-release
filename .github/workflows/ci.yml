@@ -11,7 +11,7 @@ jobs:
     name: TypeScript Agent Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -36,7 +36,7 @@ jobs:
     name: Casper contract builds from a clean clone
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install the Rust nightly pinned in rust-toolchain.toml + wasm32 + rust-src
         # Not a floating `nightly`: casper-contract uses unstable compiler features, and a later nightly removed one of them
@@ -82,7 +82,7 @@ jobs:
     name: Core Silicon DNA server.js starts and answers
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v4
         with:
@@ -117,7 +117,7 @@ jobs:
     name: SDK typechecks + MCP server answers
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v4
         with:
@@ -148,7 +148,7 @@ jobs:
     name: No secrets committed
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check no .env files committed
         run: |
