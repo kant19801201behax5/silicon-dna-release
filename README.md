@@ -15,7 +15,7 @@
 
 A production identity-verification and network-intelligence system that combines behavioral caller identity (request timing, headers, post-quantum handshake, proof of work) and kernel-level enforcement with real-time cross-chain monitoring. Two layers, one stack:
 
-**Layer 1 — Phoenix Zero (Cross-Chain RTT Oracle):** Probes 12 blockchain sequencers every 2 seconds, measuring RTT, revert ratios, stall flags, gas pressure, and blob fees. Publishes verified safety state to on-chain oracle contracts (Arbitrum registry, updated every 5 minutes; Casper oracle contract). Live since March 15, 2026.
+**Layer 1 — Phoenix Zero (Cross-Chain RTT Oracle):** Probes 12 blockchain sequencers every 2 seconds, measuring RTT, revert ratios, stall flags, gas pressure, and blob fees. Publishes verified safety state to on-chain oracle contracts (Arbitrum registry, updated every 5 minutes; Casper testnet oracle contract — publishing paused since 10 Sep 2026, Casper Mainnet still measured live). Live since March 15, 2026.
 
 **Layer 2 — Silicon DNA (14-layer bot detection, L0–L13):** 14 layers describe each caller (the passport shows every layer as pass / fail / pending / n/a); bans are decided by separate rules and enforced in the kernel by eBPF/XDP. Not a single pipeline producing one score, but a defense-in-depth system where CPU jitter physics, post-quantum cryptography, proof-of-work, and behavioral analysis each act independently.
 
