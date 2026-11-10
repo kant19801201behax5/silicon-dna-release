@@ -116,7 +116,7 @@ GET https://rtt.phoenix-ai.work/api/v1/safe
 --> {"safe": true, "base_p99_ms": 82, "revert_ratio": 0.04}
 ```
 
-Currently settled on Base mainnet. On-chain count as of 20 Oct 2026: 19 external payments from 10 wallets, $0.19 USDC in total (first payment 1 Sep 2026). 7 x402 endpoints.
+Currently settled on Base mainnet. On-chain count as of 10 Nov 2026: 42 external payments from 14 wallets, $0.42 USDC in total (first payment 1 Sep 2026). 7 x402 endpoints.
 
 ---
 
@@ -263,7 +263,7 @@ Note: the SequencerOracle contract used `EntryPointType::Caller` initially, whic
 
 **x402 monetization (live):**
 1. 7 x402-gated endpoints on Base mainnet
-2. First payment 1 Sep 2026; 19 external payments, $0.19 USDC (on-chain, as of 20 Oct 2026)
+2. First payment 1 Sep 2026; 42 external payments from 14 wallets, $0.42 USDC (on-chain, as of 10 Nov 2026)
 3. Payment networks accepted: Base, Polygon, Arbitrum One (USDC)
 4. x402 Foundation launched July 14, 2026 — 40 organizations (Coinbase, Cloudflare, AWS, Stripe, Visa)
 5. Native Casper x402 payer scaffolded in `casper-agent/casper-x402/`
