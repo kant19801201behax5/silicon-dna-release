@@ -1,5 +1,8 @@
 # Phoenix Zero × Silicon DNA — Casper Network Health Oracle
 
+> **Status 2026-11-12 (Casper Forward).** Silicon DNA × Phoenix Zero is listed in the Casper Forward team directory:
+> https://forward.casper.network/teams. Casper Mainnet is measured live by the oracle (10 of 10 nodes answering on 2026-11-11).
+>
 > **Status 2026-09-30 (Casper Forward).** Phoenix Zero × Silicon DNA runs in production; the Casper Mainnet
 > deployment is the next step. This folder is the Casper integration: the on-chain oracle contract, its
 > publishing agent, the TypeScript SDK, the MCP server and the RWA settlement gate.
@@ -133,7 +136,7 @@ Entry points:
 
 ### 2. Agent (`ts-agent/agent.js`)
 
-Node.js autonomous agent — the one actually running in production (`systemd` unit `casper-agent.service`). Reads the public feed, decides safe/unsafe, calls `update()` via `call_contract.js`.
+Node.js autonomous agent — the one that ran in production during the buildathon (`systemd` unit `casper-agent.service`); not running since 10 Sep 2026 (see the status above). Reads the public feed, decides safe/unsafe, calls `update()` via `call_contract.js`.
 
 ```bash
 cd ts-agent
